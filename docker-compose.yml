@@ -1,0 +1,8 @@
+version: "3.9"
+services:
+  node1:
+    build: .
+    command: ["--id=node1", "--addr=:6881"]
+  node2:
+    build: .
+    command: ["--id=node2", "--addr=:6882", "--peer=node1:6881"]
