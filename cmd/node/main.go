@@ -1,38 +1,63 @@
 package main
 
 import (
-	"crypto/rand"
-	"encoding/hex"
+	"flag"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
+
+	"github.com/t0sic/D7024E-Kademlia/internal/util"
 )
 
-const ID_BYTES = 20 // 160-bit
-
-type ID [ID_BYTES]byte
-
-func newRandomID() ID {
-	var id ID
-	_, err := rand.Read(id[:])
-	if err != nil {
-		log.Fatalf("failed to generate random ID: %v", err)
-	}
-	return id
-}
-
-func (id ID) String() string { return hex.EncodeToString(id[:]) }
-
 func main() {
-	id := newRandomID()
-	fmt.Printf("Node ID: %s starting...\n", id)
+	addr := flag.String("addr", ":6881", "address to listen on")
+	idHex := flag.String("id", "", "node ID in hex (optional)")
+	bootstrap := flag.Bool("bootstrap", false, "whether to bootstrap to the network (optional)")
+	peerCSV := flag.String("peers", "", "comma-separated list of bootstrap peers (optional)")
+	idSeed := flag.String("id-seed", "", "seed for node ID generation (optional)")
 
-	// Block until stopped
+	flag.Parse()
+
+	// Determine node ID
+	var id util.ID
+	var err error
+
+	switch {
+		case *idHex != "":
+			id, err = util.ParseHexID(*idHex)
+			if err != nil {
+				log.Fatalf("invalid node ID: %v", err)
+			}
+		case *idSeed != "":
+			id = util.NewIDFromSeed(*idSeed)
+		default:
+			id = util.NewRandomID()
+	}
+
+	// Parse Peers
+	var peers []string
+	if s := strings.TrimSpace(*peerCSV); s != "" {
+		for _, p := range strings.Split(s, ",") {
+			if p = strings.TrimSpace(p); p != "" {
+				peers = append(peers, p)
+			}
+		}
+	}
+
+	var role string = "node"
+	if *bootstrap { role = "bootstrap" }
+
+	fmt.Printf("Node ID: %s starting on %s as %s\n", id, *addr, role)
+	if len(peers) > 0 {
+		fmt.Printf("Bootstrap peers: %v\n", peers)
+	}
+
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)
 	<-done
-
 	fmt.Println("Shutting down...")
+
 }
