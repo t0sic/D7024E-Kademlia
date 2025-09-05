@@ -9,6 +9,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/t0sic/D7024E-Kademlia/internal/node"
 	"github.com/t0sic/D7024E-Kademlia/internal/util"
 )
 
@@ -47,13 +48,14 @@ func main() {
 		}
 	}
 
-	var role string = "node"
-	if *bootstrap { role = "bootstrap" }
-
-	fmt.Printf("Node ID: %s starting on %s as %s\n", id, *addr, role)
-	if len(peers) > 0 {
-		fmt.Printf("Bootstrap peers: %v\n", peers)
+	var config = node.NodeConfig{
+		ID:        id,
+		Addr:      *addr,
+		Bootstrap: *bootstrap,
+		Peers:     peers,
 	}
+
+	node.CreateNode(config)
 
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)

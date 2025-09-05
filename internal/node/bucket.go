@@ -1,9 +1,9 @@
 package node
 
-import "container/list"
+// import "container/list"
 
 // bucket definition
 // contains a List
-type bucket struct {
-	list *list.List
+type Bucket struct {
+	// list *list.List
 }
