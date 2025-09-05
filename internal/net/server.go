@@ -14,9 +14,17 @@ const READ_TIMEOUT = 5 * time.Second
 const WRITE_TIMEOUT = 5 * time.Second
 
 type UDPServer struct {
-	addr        *net.UDPAddr
-	conn        *net.UDPConn
-	mu		  	sync.RWMutex
+	addr *net.UDPAddr
+	conn *net.UDPConn
+	mu   sync.RWMutex
+}
+
+// Close shuts down the UDP server connection.
+func (s *UDPServer) Close() error {
+	if s.conn != nil {
+		return s.conn.Close()
+	}
+	return nil
 }
 
 // Initialize the server
@@ -28,18 +36,19 @@ func CreateUDPServer(addr string) *UDPServer {
 	}
 
 	return &UDPServer{
-		addr		: udpAddr,
+		addr: udpAddr,
 	}
 }
 
 // Start the server
 func StartUDPServer(s *UDPServer) {
-	fmt.Println("Starting UDP server on", s.addr.String())
-
 	conn, err := net.ListenUDP("udp", s.addr)
 	if err != nil {
 		panic(err)
 	}
+	// Update s.addr to the actual port assigned (important for :0)
+	s.addr = conn.LocalAddr().(*net.UDPAddr)
+	fmt.Println("Starting UDP server on", s.addr.String())
 
 	defer conn.Close()
 
@@ -51,6 +60,9 @@ func StartUDPServer(s *UDPServer) {
 
 		n, peer, err := conn.ReadFromUDP(buf)
 		if err != nil {
+			if strings.Contains(err.Error(), "use of closed network connection") {
+				break // exit loop quietly on shutdown
+			}
 			fmt.Println("UDP read error:", err)
 			continue
 		}
@@ -70,6 +82,5 @@ func StartUDPServer(s *UDPServer) {
 			fmt.Println("write error:", err)
 			continue
 		}
-
 	}
 }
