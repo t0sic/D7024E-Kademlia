@@ -1,7 +1,9 @@
 package net
 
 import (
+	"fmt"
 	"net"
+	"strings"
 	"sync"
 	"time"
 )
@@ -31,11 +33,43 @@ func CreateUDPServer(addr string) *UDPServer {
 }
 
 // Start the server
-func Start(s *UDPServer) {
+func StartUDPServer(s *UDPServer) {
+	fmt.Println("Starting UDP server on", s.addr.String())
+
 	conn, err := net.ListenUDP("udp", s.addr)
 	if err != nil {
 		panic(err)
 	}
 
+	defer conn.Close()
+
 	s.conn = conn
+
+	buf := make([]byte, BUFFER_SIZE)
+
+	for {
+
+		n, peer, err := conn.ReadFromUDP(buf)
+		if err != nil {
+			fmt.Println("UDP read error:", err)
+			continue
+		}
+
+		msg := strings.TrimSpace(string(buf[:n]))
+		fmt.Printf("UDP message from %s: %s\n", peer.String(), msg)
+
+		var resp string
+		if strings.EqualFold(msg, "PING") {
+			resp = "PONG"
+		} else {
+			resp = msg
+		}
+
+		_, err = conn.WriteToUDP([]byte(resp), peer)
+		if err != nil {
+			fmt.Println("write error:", err)
+			continue
+		}
+
+	}
 }

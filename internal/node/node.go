@@ -29,9 +29,12 @@ func CreateNode(config NodeConfig) *Node {
 		fmt.Printf("Bootstrap peers: %v\n", config.Peers)
 	}
 
+	server := net.CreateUDPServer(config.Addr)
+	defer net.StartUDPServer(server)
+
 	return &Node{
 		ID:   config.ID,
 		Addr: config.Addr,
-
+		Server: server,
 	}
 }
