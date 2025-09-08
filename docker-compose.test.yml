@@ -1,0 +1,20 @@
+services:
+  bootstrap:
+    build: .
+    command: ["--addr=:6881", "--bootstrap", "--id-seed=bootstrap-1"]
+    # No host port publishing needed for container-to-container tests
+
+  node:
+    build: .
+    command: ["--addr=:6882", "--peers=bootstrap:6881"]
+    depends_on: [bootstrap]
+    # No host port publishing needed
+
+  tester:
+    image: alpine:3.20
+    depends_on:
+      - bootstrap
+      - node
+    volumes:
+      - ./test-ping.sh:/test-ping.sh:ro
+    entrypoint: ["/bin/sh", "/test-ping.sh"]
