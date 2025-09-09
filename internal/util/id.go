@@ -47,3 +47,33 @@ func (id ID) Hex() string { return hex.EncodeToString(id[:]) }
 
 // String implements fmt.Stringer (prints hex).
 func (id ID) String() string { return id.Hex() }
+
+// Less returns true if id < otherKademliaID (bitwise)
+func (id ID) Less(otherKademliaID *ID) bool {
+	for i := 0; i < IDBytes; i++ {
+		if id[i] != otherKademliaID[i] {
+			return id[i] < otherKademliaID[i]
+		}
+	}
+	return false
+}
+
+// Equals returns true if id == otherKademliaID (bitwise)
+func (id ID) Equals(otherKademliaID *ID) bool {
+	for i := 0; i < IDBytes; i++ {
+		if id[i] != otherKademliaID[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// CalcDistance returns a new instance of a ID that is built
+// through a bitwise XOR operation betweeen id and target
+func (id ID) CalcDistance(target *ID) *ID {
+	result := ID{}
+	for i := 0; i < IDBytes; i++ {
+		result[i] = id[i] ^ target[i]
+	}
+	return &result
+}
