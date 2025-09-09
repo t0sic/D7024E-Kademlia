@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	addr := flag.String("addr", ":6881", "address to listen on")
+	addr := flag.String("addr", ":6882", "address to listen on")
 	idHex := flag.String("id", "", "node ID in hex (optional)")
 	bootstrap := flag.Bool("bootstrap", false, "whether to bootstrap to the network (optional)")
 	peerCSV := flag.String("peers", "", "comma-separated list of bootstrap peers (optional)")

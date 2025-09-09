@@ -8,7 +8,6 @@ import (
 	"time"
 )
 
-const DEFAULT_ADDRESS 	= ":6881"
 const BUFFER_SIZE 		= 4096
 const READ_TIMEOUT 		= 5 * time.Second
 const WRITE_TIMEOUT 	= 5 * time.Second

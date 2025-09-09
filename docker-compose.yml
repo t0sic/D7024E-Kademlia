@@ -1,10 +1,10 @@
 services:
   bootstrap:
       build: .
-      command: ["--addr=:6881", "--bootstrap", "--id-seed=bootstrap-1"]
+      command: ["--addr=:6882", "--bootstrap", "--id-seed=bootstrap-1"]
   node:
     build: .
-    command: ["--addr=:6881", "--peers=bootstrap:6881"]
+    command: ["--addr=:6882", "--peers=bootstrap:6882"]
     depends_on: [bootstrap]
     deploy:
       replicas: 1  # default; override with --scale
