@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"sort"
+	"strings"
 
 	"github.com/t0sic/D7024E-Kademlia/internal/util"
 )
@@ -13,7 +14,7 @@ import (
 type Contact struct {
 	ID       *util.ID
 	Address  net.UDPAddr
-	distance *util.ID
+	Distance *util.ID
 }
 
 // NewContact returns a new instance of a Contact
@@ -21,20 +22,24 @@ func NewContact(id *util.ID, address *net.UDPAddr) Contact {
 	return Contact{id, *address, nil}
 }
 
-func NewContactWithDistance(id *util.ID, address *net.UDPAddr, from *util.ID) Contact {
-	distance := from.CalcDistance(id)
-	return Contact{from, *address, distance}
+func NewContactWithDistance(ref *util.ID, address *net.UDPAddr, from *util.ID) Contact {
+	distance := from.CalcDistance(ref)
+	return Contact{
+		ID: from, 
+		Address: *address, 
+		Distance: distance,
+	}
 }
 
 // CalcDistance calculates the distance to the target and
 // fills the contacts distance field
 func (contact *Contact) CalcDistance(target *util.ID) {
-	contact.distance = contact.ID.CalcDistance(target)
+	contact.Distance = contact.ID.CalcDistance(target)
 }
 
 // Less returns true if contact.distance < otherContact.distance
 func (contact *Contact) Less(otherContact *Contact) bool {
-	return contact.distance.Less(otherContact.distance)
+	return contact.Distance.Less(otherContact.Distance)
 }
 
 // String returns a simple string representation of a Contact
@@ -78,4 +83,54 @@ func (candidates *ContactCandidates) Swap(i, j int) {
 // the Contact at index j
 func (candidates *ContactCandidates) Less(i, j int) bool {
 	return candidates.contacts[i].Less(&candidates.contacts[j])
+}
+
+
+func EncodeContactToken(c Contact) string {
+    idHex := c.ID.String()
+    // Prefer UDPAddr.String() — it handles IPv6 brackets automatically.
+    addr := c.Address.String()
+    return idHex + "@" + addr
+}
+
+func DecodeContactToken(tok string) (*Contact, error) {
+    parts := strings.SplitN(tok, "@", 2)
+    if len(parts) != 2 {
+        return nil, fmt.Errorf("bad contact token %q (want <hexID>@<host:port>)", tok)
+    }
+    pid, err := util.ParseHexID(parts[0])
+    if err != nil {
+        return nil, fmt.Errorf("bad id in token %q: %w", tok, err)
+    }
+    addr, err := net.ResolveUDPAddr("udp", parts[1])
+    if err != nil {
+        return nil, fmt.Errorf("bad addr in token %q: %w", tok, err)
+    }
+    c := NewContact(&pid, addr)
+    return &c, nil
+}
+
+func DecodeContactTokenWithDistance(tok string, ref *util.ID) (*Contact, error) {
+    c, err := DecodeContactToken(tok)
+    if err != nil { return nil, err }
+    c.CalcDistance(ref)
+    return c, nil
+}
+
+func EncodeContactsForArgs(contacts []Contact) []string {
+    out := make([]string, 0, len(contacts))
+    for _, c := range contacts {
+        out = append(out, EncodeContactToken(c))
+    }
+    return out
+}
+
+func DecodeContactsFromArgs(args []string, ref *util.ID) []Contact {
+    out := make([]Contact, 0, len(args))
+    for _, tok := range args {
+        if c, err := DecodeContactTokenWithDistance(tok, ref); err == nil {
+            out = append(out, *c)
+        }
+    }
+    return out
 }

@@ -28,4 +28,4 @@ echo "Starting bootstrap + $N node(s)..."
 compose up -d --scale node="$N"
 
 echo "Following logs for 'node' (Ctrl+C to stop viewing, containers stay up)..."
-compose logs -f node
+compose logs -f node bootstrap
