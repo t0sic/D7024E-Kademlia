@@ -10,15 +10,15 @@ import (
 	"github.com/t0sic/D7024E-Kademlia/internal/util"
 )
 
-const BUFFER_SIZE 		= 4096
-const READ_TIMEOUT 		= 5 * time.Second
-const WRITE_TIMEOUT 	= 5 * time.Second
+const BUFFER_SIZE = 4096
+const READ_TIMEOUT = 5 * time.Second
+const WRITE_TIMEOUT = 5 * time.Second
 
 // MESSAGE TYPES
-const MSG_PING      	= "PING"
-const MSG_PONG      	= "PONG"
-const MSG_NODES     	= "NODES"
-const MSG_FIND_NODE 	= "FIND_NODE"
+const MSG_PING = "PING"
+const MSG_PONG = "PONG"
+const MSG_NODES = "NODES"
+const MSG_FIND_NODE = "FIND_NODE"
 
 // WAITER PROTOCOL
 type waiter struct {
@@ -27,40 +27,40 @@ type waiter struct {
 
 // PROTOCOL
 type Message struct {
-	Type 	string
-	RPCID 	string
-	Args 	[]string
+	Type  string
+	RPCID string
+	Args  []string
 }
 
 func ParseMessage(s string) (Message, error) {
 	s = strings.TrimSpace(s)
-    if s == "" {
-        return Message{}, fmt.Errorf("empty message")
-    }
-    parts := strings.Fields(s)
-    msg := Message{Type: parts[0]}
-    rest := parts[1:]
-    if len(rest) > 0 && strings.HasPrefix(rest[0], "#") {
-        msg.RPCID = strings.TrimPrefix(rest[0], "#")
-        rest = rest[1:]
-    }
-    msg.Args = rest
-    return msg, nil
+	if s == "" {
+		return Message{}, fmt.Errorf("empty message")
+	}
+	parts := strings.Fields(s)
+	msg := Message{Type: parts[0]}
+	rest := parts[1:]
+	if len(rest) > 0 && strings.HasPrefix(rest[0], "#") {
+		msg.RPCID = strings.TrimPrefix(rest[0], "#")
+		rest = rest[1:]
+	}
+	msg.Args = rest
+	return msg, nil
 }
 
 func (m Message) String() string {
-    b := strings.Builder{}
-    b.WriteString(m.Type)
-    if m.RPCID != "" {
-        b.WriteByte(' ')
-        b.WriteByte('#')
-        b.WriteString(m.RPCID)
-    }
-    if len(m.Args) > 0 {
-        b.WriteByte(' ')
-        b.WriteString(strings.Join(m.Args, " "))
-    }
-    return b.String()
+	b := strings.Builder{}
+	b.WriteString(m.Type)
+	if m.RPCID != "" {
+		b.WriteByte(' ')
+		b.WriteByte('#')
+		b.WriteString(m.RPCID)
+	}
+	if len(m.Args) > 0 {
+		b.WriteByte(' ')
+		b.WriteString(strings.Join(m.Args, " "))
+	}
+	return b.String()
 }
 
 // UDP SERVER
@@ -69,17 +69,32 @@ func (m Message) String() string {
 type Handler func(from *net.UDPAddr, msg Message) (*Message, error)
 
 type UDPServer struct {
-	addr 		*net.UDPAddr
-	conn 		*net.UDPConn
+	addr *net.UDPAddr
+	conn *net.UDPConn
 
-	closing 	bool
-	mu   		sync.RWMutex
-	wg 			sync.WaitGroup
-	handlers 	map[string]Handler
+	closing  bool
+	mu       sync.RWMutex
+	wg       sync.WaitGroup
+	handlers map[string]Handler
 
-	
-	waiters 	map[string]*waiter
-	wmu 		sync.Mutex
+	waiters map[string]*waiter
+	wmu     sync.Mutex
+}
+
+// Ping implements the Network interface. Stub for now.
+func (s *UDPServer) Ping(to *net.UDPAddr, id util.ID) error {
+	// TODO: implement actual ping logic
+	return nil
+}
+
+// internal/net/server.go
+
+// expose bound address (handy for :0)
+func (s *UDPServer) Addr() *net.UDPAddr { return s.addr }
+
+// simple fire-and-forget wrapper (uses your existing write/WriteTo)
+func (s *UDPServer) Send(to *net.UDPAddr, msg Message) error {
+	return s.WriteTo(to, msg.String()) // or s.writeTo(...) depending on your file
 }
 
 // Close shuts down the UDP server connection.
@@ -103,15 +118,15 @@ func (s *UDPServer) isClosing() bool {
 
 // Initialize the server
 func CreateUDPServer(addr string) *UDPServer {
-    udpAddr, err := net.ResolveUDPAddr("udp", addr)
-    if err != nil {
-        panic(err)
-    }
-    return &UDPServer{
-        addr:     udpAddr,
-        handlers: make(map[string]Handler),
+	udpAddr, err := net.ResolveUDPAddr("udp", addr)
+	if err != nil {
+		panic(err)
+	}
+	return &UDPServer{
+		addr:     udpAddr,
+		handlers: make(map[string]Handler),
 		waiters:  make(map[string]*waiter),
-    }
+	}
 }
 
 // RegisterHandler for a specific message type
@@ -143,74 +158,74 @@ func (s *UDPServer) WriteTo(peer *net.UDPAddr, payload string) error {
 
 // addWaiter adds a waiter for a specific RPC ID and returns its channel
 func (s *UDPServer) AddWaiter(rpcID string) <-chan Message {
-    ch := make(chan Message, 1)
-    s.wmu.Lock()
-    s.waiters[rpcID] = &waiter{ch: ch}
-    s.wmu.Unlock()
-    return ch
+	ch := make(chan Message, 1)
+	s.wmu.Lock()
+	s.waiters[rpcID] = &waiter{ch: ch}
+	s.wmu.Unlock()
+	return ch
 }
 
 func (s *UDPServer) Wait(rpcID string, timeout time.Duration) (Message, error) {
-    s.wmu.Lock()
-    w, ok := s.waiters[rpcID]
-    s.wmu.Unlock()
-    if !ok {
-        return Message{}, fmt.Errorf("no waiter for rpcID=%s", rpcID)
-    }
+	s.wmu.Lock()
+	w, ok := s.waiters[rpcID]
+	s.wmu.Unlock()
+	if !ok {
+		return Message{}, fmt.Errorf("no waiter for rpcID=%s", rpcID)
+	}
 
-    select {
-    case msg, ok := <-w.ch:
-        if !ok {
-            return Message{}, fmt.Errorf("waiter closed (server shutting down?)")
-        }
-        return msg, nil
-    case <-time.After(timeout):
-        s.CancelWaiter(rpcID)
-        return Message{}, fmt.Errorf("timeout waiting for rpcID=%s", rpcID)
-    }
+	select {
+	case msg, ok := <-w.ch:
+		if !ok {
+			return Message{}, fmt.Errorf("waiter closed (server shutting down?)")
+		}
+		return msg, nil
+	case <-time.After(timeout):
+		s.CancelWaiter(rpcID)
+		return Message{}, fmt.Errorf("timeout waiting for rpcID=%s", rpcID)
+	}
 }
 
 // CancelWaiter removes a waiter and closes its channel (unblocks Wait).
 func (s *UDPServer) CancelWaiter(rpcID string) {
-    s.wmu.Lock()
-    if w, ok := s.waiters[rpcID]; ok {
-        delete(s.waiters, rpcID)
-        close(w.ch)
-    }
-    s.wmu.Unlock()
+	s.wmu.Lock()
+	if w, ok := s.waiters[rpcID]; ok {
+		delete(s.waiters, rpcID)
+		close(w.ch)
+	}
+	s.wmu.Unlock()
 }
 
 // deliverToWaiter delivers a message to the corresponding waiter if exists
 func (s *UDPServer) deliverToWaiter(msg Message) bool {
-    if msg.RPCID == "" {
-        return false
-    }
-    s.wmu.Lock()
-    w, ok := s.waiters[msg.RPCID]
-    if ok {
-        delete(s.waiters, msg.RPCID)
-    }
-    s.wmu.Unlock()
-    if ok {
-        w.ch <- msg
-        return true
-    }
-    return false
+	if msg.RPCID == "" {
+		return false
+	}
+	s.wmu.Lock()
+	w, ok := s.waiters[msg.RPCID]
+	if ok {
+		delete(s.waiters, msg.RPCID)
+	}
+	s.wmu.Unlock()
+	if ok {
+		w.ch <- msg
+		return true
+	}
+	return false
 }
 
 // Ensures msg.RPCID is set, registers waiter, sends, then waits.
 func (s *UDPServer) SendAndWait(peer *net.UDPAddr, msg Message, timeout time.Duration) (Message, error) {
-    if msg.RPCID == "" {
-        msg.RPCID = util.NewRandomID().Hex()
-    }
-    ch := s.AddWaiter(msg.RPCID)
-    _ = ch // just to emphasize we registered before sending
+	if msg.RPCID == "" {
+		msg.RPCID = util.NewRandomID().Hex()
+	}
+	ch := s.AddWaiter(msg.RPCID)
+	_ = ch // just to emphasize we registered before sending
 
-    if err := s.WriteTo(peer, msg.String()); err != nil {
-        s.CancelWaiter(msg.RPCID)
-        return Message{}, err
-    }
-    return s.Wait(msg.RPCID, timeout)
+	if err := s.WriteTo(peer, msg.String()); err != nil {
+		s.CancelWaiter(msg.RPCID)
+		return Message{}, err
+	}
+	return s.Wait(msg.RPCID, timeout)
 }
 
 // Start the server
@@ -275,4 +290,3 @@ func (s *UDPServer) Start() error {
 
 	}
 }
-

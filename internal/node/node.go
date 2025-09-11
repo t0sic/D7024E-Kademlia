@@ -17,14 +17,15 @@ type NodeConfig struct {
 	Addr      string
 	Bootstrap bool
 	Peers     []string
+	NewNet    func(addr string) kadnet.Network // <— add this
 }
 
 type Node struct {
 	ID           util.ID
 	Addr         string
-	Server       *kadnet.UDPServer
+	Server       kadnet.Network // <— use interface
 	RoutingTable *kademlia.RoutingTable
-	Config 	 	 NodeConfig
+	Config       NodeConfig
 }
 
 func CreateNode(config NodeConfig) *Node {
@@ -34,24 +35,29 @@ func CreateNode(config NodeConfig) *Node {
 		fmt.Printf("Bootstrap peers: %v\n", config.Peers)
 	}
 
+	newNet := config.NewNet
+	if newNet == nil {
+		newNet = func(a string) kadnet.Network { return kadnet.CreateUDPServer(a) }
+	}
+
 	udpAddr, err := net.ResolveUDPAddr("udp", config.Addr)
 	if err != nil {
-	    panic(fmt.Errorf("resolve local addr %q: %w", config.Addr, err))
+		panic(fmt.Errorf("resolve local addr %q: %w", config.Addr, err))
 	}
 	var contact kademlia.Contact = kademlia.NewContact(&config.ID, udpAddr)
 
 	node := &Node{
 		ID:           config.ID,
 		Addr:         config.Addr,
-		Server:       kadnet.CreateUDPServer(config.Addr),
+		Server:       newNet(config.Addr),
 		RoutingTable: kademlia.CreateRoutingTable(contact),
-		Config:	   	  config,
+		Config:       config,
 	}
-	
+
 	node.Server.On(kadnet.MSG_PING, node.HandlePing)
 	node.Server.On(kadnet.MSG_PONG, node.HandlePong)
 	node.Server.On(kadnet.MSG_FIND_NODE, node.HandleFindNode)
-	
+
 	go func() {
 		if err := node.Server.Start(); err != nil {
 			fmt.Println("UDP server stopped:", err)
@@ -75,19 +81,19 @@ func (n *Node) JoinNetwork() {
 			continue
 		}
 
-		peerID, err := n.PingSync(addr, 800 * time.Millisecond)
+		peerID, err := n.PingSync(addr, 800*time.Millisecond)
 		if err != nil {
 			fmt.Printf("PING -> %s failed: %v\n", peer, err)
 			continue
 		}
 		fmt.Printf("Peer %s is alive (id=%s)\n", peer, peerID.String())
 
-		contacts, ferr := n.FindNodesSync(addr, n.ID, n.ID, 800 * time.Millisecond)
+		contacts, ferr := n.FindNodesSync(addr, n.ID, n.ID, 800*time.Millisecond)
 		if ferr != nil {
 			fmt.Printf("FIND_NODE -> %s failed: %v\n", peer, ferr)
 			continue
 		}
-		
+
 		for _, c := range contacts {
 			n.RoutingTable.AddContact(c)
 		}
@@ -101,7 +107,7 @@ func (n *Node) HandleFindNode(from *net.UDPAddr, msg kadnet.Message) (*kadnet.Me
 	if len(msg.Args) == 0 {
 		return nil, fmt.Errorf("FIND_NODE message missing target ID argument")
 	}
-	
+
 	fromID, err := util.ParseHexID(msg.Args[0])
 	if err != nil {
 		return nil, fmt.Errorf("invalid node ID in FIND_NODE message: %w", err)
@@ -116,7 +122,7 @@ func (n *Node) HandleFindNode(from *net.UDPAddr, msg kadnet.Message) (*kadnet.Me
 	closest := n.RoutingTable.FindClosestContacts(&targetID, kademlia.K)
 
 	// Build: NODES <myID> <id@host:port>...
-	args := []string{ n.ID.String() }
+	args := []string{n.ID.String()}
 	for _, c := range closest {
 		// skip the requester and self
 		if c.ID != nil && (*c.ID == fromID || *c.ID == n.ID) {
@@ -125,13 +131,12 @@ func (n *Node) HandleFindNode(from *net.UDPAddr, msg kadnet.Message) (*kadnet.Me
 		args = append(args, kademlia.EncodeContactToken(c))
 	}
 
-	return &kadnet.Message{ 
-		Type: kadnet.MSG_NODES, 
+	return &kadnet.Message{
+		Type:  kadnet.MSG_NODES,
 		RPCID: msg.RPCID,
-		Args: args, 
+		Args:  args,
 	}, nil
 }
-
 
 func (n *Node) HandlePong(from *net.UDPAddr, msg kadnet.Message) (*kadnet.Message, error) {
 	if len(msg.Args) == 0 {
@@ -159,8 +164,9 @@ func (n *Node) HandlePing(from *net.UDPAddr, msg kadnet.Message) (*kadnet.Messag
 	}
 
 	return &kadnet.Message{
-		Type: kadnet.MSG_PONG,
+		Type:  kadnet.MSG_PONG,
 		RPCID: msg.RPCID,
-		Args: []string{n.ID.String()},
+		Args:  []string{n.ID.String()},
 	}, nil
+
 }
