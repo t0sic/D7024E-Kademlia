@@ -95,7 +95,7 @@ func (n *Node) JoinNetwork() {
 		}
 
 		for _, c := range contacts {
-			n.RoutingTable.AddContact(c)
+			n.AddContact(c)
 		}
 
 	}
@@ -118,7 +118,7 @@ func (n *Node) HandleFindNode(from *net.UDPAddr, msg kadnet.Message) (*kadnet.Me
 		return nil, fmt.Errorf("invalid target ID in FIND_NODE message: %w", err)
 	}
 
-	n.RoutingTable.AddContact(kademlia.NewContactWithDistance(&n.ID, from, &fromID))
+	n.AddContact(kademlia.NewContactWithDistance(&n.ID, from, &fromID))
 	closest := n.RoutingTable.FindClosestContacts(&targetID, kademlia.K)
 
 	// Build: NODES <myID> <id@host:port>...
@@ -149,7 +149,7 @@ func (n *Node) HandlePong(from *net.UDPAddr, msg kadnet.Message) (*kadnet.Messag
 	if err != nil {
 		return nil, fmt.Errorf("invalid node ID in PONG message: %w", err)
 	}
-	n.RoutingTable.AddContact(kademlia.NewContactWithDistance(&n.ID, from, &senderID))
+	n.AddContact(kademlia.NewContactWithDistance(&n.ID, from, &senderID))
 
 	return nil, nil // No reply needed for PONG
 }
@@ -168,5 +168,19 @@ func (n *Node) HandlePing(from *net.UDPAddr, msg kadnet.Message) (*kadnet.Messag
 		RPCID: msg.RPCID,
 		Args:  []string{n.ID.String()},
 	}, nil
+
+}
+
+func (n *Node) AddContact(c kademlia.Contact) {
+	contact := n.RoutingTable.AddContact(c)
+	if contact != nil {
+		_, err := n.PingSync(&c.Address, 800*time.Millisecond)
+		if err != nil {
+			n.RoutingTable.RemoveContact(*contact)
+			n.RoutingTable.AddContact(c)
+			fmt.Printf("PING -> %s failed: %v\n", c.Address.String(), err)
+		}
+
+	}
 
 }

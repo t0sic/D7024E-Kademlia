@@ -28,12 +28,27 @@ func CreateRoutingTable(me Contact) *RoutingTable {
 }
 
 // AddContact add a new contact to the correct Bucket
-func (routingTable *RoutingTable) AddContact(contact Contact) {
+func (routingTable *RoutingTable) AddContact(contact Contact) *Contact {
 	routingTable.mu.Lock()
 	defer routingTable.mu.Unlock()
 	bucketIndex := routingTable.getBucketIndex(contact.ID)
 	bucket := routingTable.buckets[bucketIndex]
-	bucket.AddContact(contact)
+
+	if !bucket.isFull() {
+		bucket.AddContact(contact)
+		return nil
+	}
+	return bucket.GetLeastRecentlySeen()
+}
+
+// RemoveContact removes a contact from the correct Bucket
+func (routingTable *RoutingTable) RemoveContact(contact Contact) {
+	routingTable.mu.Lock()
+	defer routingTable.mu.Unlock()
+	bucketIndex := routingTable.getBucketIndex(contact.ID)
+	bucket := routingTable.buckets[bucketIndex]
+
+	bucket.RemoveContact(contact)
 }
 
 // FindClosestContacts finds the count closest Contacts to the target in the RoutingTable

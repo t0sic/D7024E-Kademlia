@@ -27,30 +27,30 @@ func (n *Node) PingSync(addr *net.UDPAddr, timeout time.Duration) (util.ID, erro
 		return util.ID{}, fmt.Errorf("invalid peer ID in PONG: %w", err)
 	}
 
-	n.RoutingTable.AddContact(kademlia.NewContactWithDistance(&n.ID, addr, &peerID))
+	n.AddContact(kademlia.NewContactWithDistance(&n.ID, addr, &peerID))
 
 	return peerID, nil
 }
 
 func (n *Node) FindNodesSync(addr *net.UDPAddr, fromID, target util.ID, timeout time.Duration) ([]kademlia.Contact, error) {
-    req := kadnet.Message{
-        Type:  kadnet.MSG_FIND_NODE,
-        Args:  []string{fromID.String(), target.String()},
-    }
-    resp, err := n.Server.SendAndWait(addr, req, timeout)
-    if err != nil {
-        return nil, err
-    }
-    if resp.Type != kadnet.MSG_NODES || len(resp.Args) < 1 {
-        return nil, fmt.Errorf("bad NODES response")
-    }
-    // resp.Args: [responderID, id@host:port, ...]
-    contacts := make([]kademlia.Contact, 0, len(resp.Args)-1)
-    tgt := target // distance relative to lookup target
-    for _, tok := range resp.Args[1:] {
-        if c, err := kademlia.DecodeContactTokenWithDistance(tok, &tgt); err == nil {
-            contacts = append(contacts, *c)
-        }
-    }
-    return contacts, nil
+	req := kadnet.Message{
+		Type: kadnet.MSG_FIND_NODE,
+		Args: []string{fromID.String(), target.String()},
+	}
+	resp, err := n.Server.SendAndWait(addr, req, timeout)
+	if err != nil {
+		return nil, err
+	}
+	if resp.Type != kadnet.MSG_NODES || len(resp.Args) < 1 {
+		return nil, fmt.Errorf("bad NODES response")
+	}
+	// resp.Args: [responderID, id@host:port, ...]
+	contacts := make([]kademlia.Contact, 0, len(resp.Args)-1)
+	tgt := target // distance relative to lookup target
+	for _, tok := range resp.Args[1:] {
+		if c, err := kademlia.DecodeContactTokenWithDistance(tok, &tgt); err == nil {
+			contacts = append(contacts, *c)
+		}
+	}
+	return contacts, nil
 }

@@ -19,6 +19,35 @@ func newBucket() *Bucket {
 	return bucket
 }
 
+// isFull returns true if the bucket is full
+func (bucket *Bucket) isFull() bool {
+	return bucket.list.Len() >= K
+}
+
+// GetLeastRecentlySeen returns the least recently seen Contact in the bucket
+func (bucket *Bucket) GetLeastRecentlySeen() *Contact {
+	if bucket.list.Len() == 0 {
+		return nil
+	}
+	elt := bucket.list.Back()
+	contact := elt.Value.(Contact)
+	return &contact
+}
+
+// RemoveContact removes the Contact from the bucket
+func (bucket *Bucket) RemoveContact(contact Contact) {
+	var element *list.Element
+	for e := bucket.list.Front(); e != nil; e = e.Next() {
+		nodeID := e.Value.(Contact).ID
+		if (contact).ID.Equals(nodeID) {
+			element = e
+		}
+	}
+	if element != nil {
+		bucket.list.Remove(element)
+	}
+}
+
 // AddContact adds the Contact to the front of the bucket
 // or moves it to the front of the bucket if it already existed
 func (bucket *Bucket) AddContact(contact Contact) {
