@@ -17,13 +17,13 @@ type NodeConfig struct {
 	Addr      string
 	Bootstrap bool
 	Peers     []string
-	NewNet    func(addr string) kadnet.Network // <— add this
+	NewNet    func(addr string) kadnet.Network
 }
 
 type Node struct {
 	ID           util.ID
 	Addr         string
-	Server       kadnet.Network // <— use interface
+	Server       kadnet.Network
 	RoutingTable *kademlia.RoutingTable
 	Config       NodeConfig
 }
