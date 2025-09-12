@@ -1,4 +1,3 @@
-// tests/pingpong_mock_test.go
 package tests
 
 import (

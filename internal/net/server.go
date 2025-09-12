@@ -81,20 +81,18 @@ type UDPServer struct {
 	wmu     sync.Mutex
 }
 
-// Ping implements the Network interface. Stub for now.
+// Ping implements the Network interface
 func (s *UDPServer) Ping(to *net.UDPAddr, id util.ID) error {
 	// TODO: implement actual ping logic
 	return nil
 }
 
-// internal/net/server.go
-
 // expose bound address (handy for :0)
 func (s *UDPServer) Addr() *net.UDPAddr { return s.addr }
 
-// simple fire-and-forget wrapper (uses your existing write/WriteTo)
+// simple fire-and-forget wrapper
 func (s *UDPServer) Send(to *net.UDPAddr, msg Message) error {
-	return s.WriteTo(to, msg.String()) // or s.writeTo(...) depending on your file
+	return s.WriteTo(to, msg.String())
 }
 
 // Close shuts down the UDP server connection.
@@ -185,7 +183,7 @@ func (s *UDPServer) Wait(rpcID string, timeout time.Duration) (Message, error) {
 	}
 }
 
-// CancelWaiter removes a waiter and closes its channel (unblocks Wait).
+// CancelWaiter removes a waiter and closes its channel
 func (s *UDPServer) CancelWaiter(rpcID string) {
 	s.wmu.Lock()
 	if w, ok := s.waiters[rpcID]; ok {
@@ -195,7 +193,7 @@ func (s *UDPServer) CancelWaiter(rpcID string) {
 	s.wmu.Unlock()
 }
 
-// deliverToWaiter delivers a message to the corresponding waiter if exists
+// Delivers a message to the corresponding waiter if exists
 func (s *UDPServer) deliverToWaiter(msg Message) bool {
 	if msg.RPCID == "" {
 		return false
@@ -219,7 +217,7 @@ func (s *UDPServer) SendAndWait(peer *net.UDPAddr, msg Message, timeout time.Dur
 		msg.RPCID = util.NewRandomID().Hex()
 	}
 	ch := s.AddWaiter(msg.RPCID)
-	_ = ch // just to emphasize we registered before sending
+	_ = ch
 
 	if err := s.WriteTo(peer, msg.String()); err != nil {
 		s.CancelWaiter(msg.RPCID)
@@ -234,7 +232,7 @@ func (s *UDPServer) Start() error {
 	if err != nil {
 		panic(err)
 	}
-	// Update s.addr to the actual port assigned (important for :0)
+
 	s.addr = conn.LocalAddr().(*net.UDPAddr)
 	fmt.Println("Starting UDP server on", s.addr.String())
 

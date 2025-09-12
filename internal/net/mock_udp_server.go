@@ -12,7 +12,7 @@ import (
 
 var (
 	mockRegMu sync.RWMutex
-	mockReg   = map[string]*MockUDP{} // addr.String() -> server
+	mockReg   = map[string]*MockUDP{}
 )
 
 type MockUDP struct {
@@ -35,7 +35,7 @@ func NewMockUDP(addr string) *MockUDP {
 }
 
 func (m *MockUDP) Addr() *net.UDPAddr { return m.addr }
-func (m *MockUDP) Start() error       { return nil } // nothing to spin up
+func (m *MockUDP) Start() error       { return nil }
 func (m *MockUDP) Close() error {
 	mockRegMu.Lock()
 	delete(mockReg, m.addr.String())
@@ -58,13 +58,12 @@ func (m *MockUDP) Send(to *net.UDPAddr, msg Message) error {
 	h := dst.handlers[msg.Type]
 	if h == nil {
 		return nil
-	} // nobody listening; drop
+	}
 	reply, err := h(m.addr, msg)
 	if err != nil || reply == nil {
 		return err
 	}
 
-	// deliver synchronous reply back to sender (us)
 	if rh := m.handlers[reply.Type]; rh != nil {
 		_, _ = rh(dst.addr, *reply)
 	}
