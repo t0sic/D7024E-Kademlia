@@ -88,16 +88,13 @@ func (n *Node) JoinNetwork() {
 		}
 		fmt.Printf("Peer %s is alive (id=%s)\n", peer, peerID.String())
 
-		contacts, ferr := n.FindNodesSync(addr, n.ID, n.ID, 800*time.Millisecond)
-		if ferr != nil {
-			fmt.Printf("FIND_NODE -> %s failed: %v\n", peer, ferr)
-			continue
-		}
+		// print result save it in a variable if needed
+		contacts := n.IterativeFindNode(n.ID, 800*time.Millisecond)
 
+		// print contacts
 		for _, c := range contacts {
-			n.AddContact(c)
+			fmt.Printf("Found contact: %s\n", c.String())
 		}
-
 	}
 }
 
@@ -119,11 +116,11 @@ func (n *Node) HandleFindNode(from *net.UDPAddr, msg kadnet.Message) (*kadnet.Me
 	}
 
 	n.AddContact(kademlia.NewContactWithDistance(&n.ID, from, &fromID))
-	closest := n.RoutingTable.FindClosestContacts(&targetID, kademlia.K)
+	shortlist := n.RoutingTable.FindClosestContacts(&targetID, kademlia.K)
 
 	// Build: NODES <myID> <id@host:port>...
 	args := []string{n.ID.String()}
-	for _, c := range closest {
+	for _, c := range shortlist {
 		// skip the requester and self
 		if c.ID != nil && (*c.ID == fromID || *c.ID == n.ID) {
 			continue
@@ -182,5 +179,89 @@ func (n *Node) AddContact(c kademlia.Contact) {
 		}
 
 	}
+}
 
+// IterativeFindNode runs the Kademlia iterative FIND_NODE lookup.
+// Returns up to kademlia.K closest contacts to the target.
+func (n *Node) IterativeFindNode(target util.ID, timeout time.Duration) []kademlia.Contact {
+	// Start shortlist from routing table
+	shortlist := n.RoutingTable.FindClosestContacts(&target, kademlia.K)
+
+	// Track queried nodes
+	queried := make(map[string]bool)
+
+	progress := true
+	for progress {
+		progress = false
+
+		// Select up to ALPHA closest unqueried contacts
+		batch := make([]kademlia.Contact, 0, kademlia.ALPHA)
+		for _, c := range shortlist {
+			if len(batch) >= kademlia.ALPHA {
+				break
+			}
+			if !queried[c.ID.String()] {
+				batch = append(batch, c)
+			}
+		}
+
+		// If no new nodes to query, we’re done
+		if len(batch) == 0 {
+			break
+		}
+
+		// Query them in parallel
+		type result struct {
+			from     kademlia.Contact
+			contacts []kademlia.Contact
+			err      error
+		}
+		results := make(chan result, len(batch))
+		for _, c := range batch {
+			go func(c kademlia.Contact) {
+				queried[c.ID.String()] = true
+				contacts, err := n.FindNodesSync(&c.Address, n.ID, target, timeout)
+				if err != nil {
+					results <- result{from: c, contacts: nil, err: err}
+					return
+				}
+				results <- result{from: c, contacts: contacts, err: nil}
+			}(c)
+		}
+
+		// Collect results
+		for i := 0; i < len(batch); i++ {
+			res := <-results
+			if res.err != nil {
+				continue
+			}
+			for _, c := range res.contacts {
+				c.CalcDistance(&target)
+				n.AddContact(c) // maintain table
+				// Add if not seen
+				if !contains(shortlist, c) {
+					shortlist = append(shortlist, c)
+					progress = true
+				}
+			}
+		}
+
+		// Sort shortlist by distance to target
+		cand := kademlia.ContactCandidates{}
+		cand.Append(shortlist)
+		cand.Sort()
+		shortlist = cand.GetContacts(kademlia.K)
+	}
+
+	return shortlist
+}
+
+// contains checks if a Contact with same ID exists in slice
+func contains(list []kademlia.Contact, c kademlia.Contact) bool {
+	for _, x := range list {
+		if x.ID.Equals(c.ID) {
+			return true
+		}
+	}
+	return false
 }
