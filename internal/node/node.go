@@ -202,6 +202,7 @@ func (n *Node) IterativeFindNode(target util.ID, timeout time.Duration) []kademl
 			}
 			if !queried[c.ID.String()] {
 				batch = append(batch, c)
+				queried[c.ID.String()] = true
 			}
 		}
 
