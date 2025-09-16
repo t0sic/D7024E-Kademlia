@@ -88,6 +88,9 @@ func (n *Node) JoinNetwork() {
 		}
 		fmt.Printf("Peer %s is alive (id=%s)\n", peer, peerID.String())
 
+		// Add bootstrap peer explicitly to routing table
+		n.AddContact(kademlia.NewContactWithDistance(&n.ID, addr, &peerID))
+
 		// print result save it in a variable if needed
 		contacts := n.IterativeFindNode(n.ID, 800*time.Millisecond)
 
@@ -169,15 +172,14 @@ func (n *Node) HandlePing(from *net.UDPAddr, msg kadnet.Message) (*kadnet.Messag
 }
 
 func (n *Node) AddContact(c kademlia.Contact) {
-	contact := n.RoutingTable.AddContact(c)
-	if contact != nil {
-		_, err := n.PingSync(&c.Address, 800*time.Millisecond)
+	evictCandidate := n.RoutingTable.AddContact(c)
+	if evictCandidate != nil {
+		_, err := n.PingSync(&evictCandidate.Address, 800*time.Millisecond)
 		if err != nil {
-			n.RoutingTable.RemoveContact(*contact)
+			n.RoutingTable.RemoveContact(*evictCandidate)
 			n.RoutingTable.AddContact(c)
-			fmt.Printf("PING -> %s failed: %v\n", c.Address.String(), err)
+			fmt.Printf("PING -> %s failed: %v\n", evictCandidate.Address.String(), err)
 		}
-
 	}
 }
 
@@ -220,7 +222,6 @@ func (n *Node) IterativeFindNode(target util.ID, timeout time.Duration) []kademl
 		results := make(chan result, len(batch))
 		for _, c := range batch {
 			go func(c kademlia.Contact) {
-				queried[c.ID.String()] = true
 				contacts, err := n.FindNodesSync(&c.Address, n.ID, target, timeout)
 				if err != nil {
 					results <- result{from: c, contacts: nil, err: err}

@@ -3,6 +3,7 @@ package tests
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	kadnet "github.com/t0sic/D7024E-Kademlia/internal/net"
 	"github.com/t0sic/D7024E-Kademlia/internal/node"
@@ -53,7 +54,7 @@ func Test50NodesJoinNetwork(t *testing.T) {
 	makeMock := func(a string) kadnet.Network { return kadnet.NewMockUDP(a) }
 
 	a := node.CreateNode(node.NodeConfig{
-		ID: util.NewRandomID(), Addr: "127.0.0.1:10001", NewNet: makeMock, Bootstrap: true,
+		ID: util.NewIDFromSeed("King"), Addr: "127.0.0.1:10001", NewNet: makeMock, Bootstrap: true,
 	})
 	t.Logf("Created node a: ID=%s Addr=%s", a.ID.String(), a.Addr)
 	defer a.Server.Close()
@@ -62,7 +63,7 @@ func Test50NodesJoinNetwork(t *testing.T) {
 	for i := 2; i <= 50; i++ {
 		addr := fmt.Sprintf("127.0.0.1:%d", 10000+i)
 		n := node.CreateNode(node.NodeConfig{
-			ID:     util.NewRandomID(),
+			ID:     util.NewIDFromSeed("King" + fmt.Sprintf("%d", i)),
 			Addr:   addr,
 			NewNet: makeMock,
 			Peers:  []string{a.Addr},
@@ -70,6 +71,9 @@ func Test50NodesJoinNetwork(t *testing.T) {
 		t.Logf("Created node %d: ID=%s Addr=%s", i, n.ID.String(), n.Addr)
 		nodes = append(nodes, n)
 	}
+
+	time.Sleep(200 * time.Millisecond)
+
 	defer func() {
 		for _, n := range nodes {
 			n.Server.Close()

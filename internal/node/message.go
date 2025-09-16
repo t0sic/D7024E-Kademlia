@@ -26,9 +26,6 @@ func (n *Node) PingSync(addr *net.UDPAddr, timeout time.Duration) (util.ID, erro
 	if err != nil {
 		return util.ID{}, fmt.Errorf("invalid peer ID in PONG: %w", err)
 	}
-
-	n.AddContact(kademlia.NewContactWithDistance(&n.ID, addr, &peerID))
-
 	return peerID, nil
 }
 
