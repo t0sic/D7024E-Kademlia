@@ -81,12 +81,6 @@ type UDPServer struct {
 	wmu     sync.Mutex
 }
 
-// Ping implements the Network interface
-func (s *UDPServer) Ping(to *net.UDPAddr, id util.ID) error {
-	// TODO: implement actual ping logic
-	return nil
-}
-
 // expose bound address (handy for :0)
 func (s *UDPServer) Addr() *net.UDPAddr { return s.addr }
 

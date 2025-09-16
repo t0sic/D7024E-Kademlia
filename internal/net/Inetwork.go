@@ -3,8 +3,6 @@ package net
 import (
 	"net"
 	"time"
-
-	"github.com/t0sic/D7024E-Kademlia/internal/util"
 )
 
 // Network interface abstracts the network layer for Kademlia nodes
@@ -15,7 +13,6 @@ type Network interface {
 	Addr() *net.UDPAddr
 
 	Send(to *net.UDPAddr, msg Message) error
-	Ping(to *net.UDPAddr, id util.ID) error
 
 	SendAndWait(to *net.UDPAddr, msg Message, timeout time.Duration) (Message, error)
 }

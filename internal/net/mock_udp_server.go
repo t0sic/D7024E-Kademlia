@@ -70,11 +70,6 @@ func (m *MockUDP) Send(to *net.UDPAddr, msg Message) error {
 	return nil
 }
 
-// Convenience to match real server
-func (m *MockUDP) Ping(to *net.UDPAddr, id util.ID) error {
-	return m.Send(to, Message{Type: MSG_PING, Args: []string{id.String()}})
-}
-
 func (m *MockUDP) SendAndWait(to *net.UDPAddr, msg Message, timeout time.Duration) (Message, error) {
 	// mimic UDP SendAndWait: set an RPCID, call handler, return reply with same RPCID
 	if msg.RPCID == "" {
