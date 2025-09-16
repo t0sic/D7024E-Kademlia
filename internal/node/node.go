@@ -10,8 +10,6 @@ import (
 	"github.com/t0sic/D7024E-Kademlia/internal/util"
 )
 
-// TODO: implement node structure and methods
-
 type NodeConfig struct {
 	ID        util.ID
 	Addr      string
