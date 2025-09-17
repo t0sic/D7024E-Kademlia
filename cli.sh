@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Avoid MSYS path conversion when running under Git Bash on Windows
+if [ -n "${MSYSTEM-}" ] || [ -n "${MSYS-}" ]; then
+  export MSYS_NO_PATHCONV=1
+fi
 # run-in.sh — run a command inside a docker container or compose service
 # Examples:
 #   ./run-in.sh -c kad-bootstrap -- /app/kad --help
