@@ -1,6 +1,7 @@
 package node
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"time"
@@ -264,4 +265,19 @@ func contains(list []kademlia.Contact, c kademlia.Contact) bool {
 		}
 	}
 	return false
+}
+
+func (n *Node) Shutdown(ctx context.Context) error {
+	done := make(chan struct{})
+	go func() {
+		_ = n.Server.Close() // Close waits for the listener goroutine to finish
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }

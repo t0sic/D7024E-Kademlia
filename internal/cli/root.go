@@ -41,9 +41,14 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&flagBootstrap, "bootstrap", false, "bootstrap to provided peers (optional)")
 	rootCmd.PersistentFlags().StringVar(&flagPeersCSV, "peers", "", "comma-separated list of bootstrap peers (optional)")
 
-	// only one subcommand for now
 	rootCmd.AddCommand(cmdRun)
-	rootCmd.AddCommand(cmdTest)
+}
+
+func replRootCmd() *cobra.Command {
+	r := &cobra.Command{Use: "kad-repl"}
+	r.AddCommand(cmdExit)
+	r.AddCommand(cmdTest)
+	return r
 }
 
 func buildID() util.ID {

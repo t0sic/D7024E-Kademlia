@@ -95,9 +95,14 @@ func (s *UDPServer) Close() error {
 	s.closing = true
 	s.mu.Unlock()
 
+	// Unblock any goroutines waiting on RPC responses
+	s.CancelAllWaiters()
+
 	if s.conn != nil {
-		_ = s.conn.Close()
+		_ = s.conn.Close() // triggers read deadline + loop exit
 	}
+
+	// Wait until Start() returns and wg.Done() executes
 	s.wg.Wait()
 	return nil
 }
@@ -281,4 +286,13 @@ func (s *UDPServer) Start() error {
 		}
 
 	}
+}
+
+func (s *UDPServer) CancelAllWaiters() {
+	s.wmu.Lock()
+	for id, w := range s.waiters {
+		delete(s.waiters, id)
+		close(w.ch)
+	}
+	s.wmu.Unlock()
 }
