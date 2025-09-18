@@ -48,6 +48,7 @@ func replRootCmd() *cobra.Command {
 	r := &cobra.Command{Use: "kad-repl"}
 	r.AddCommand(cmdExit)
 	r.AddCommand(cmdTest)
+	r.AddCommand(cmdPut)
 	return r
 }
 

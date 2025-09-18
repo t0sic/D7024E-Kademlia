@@ -2,8 +2,11 @@ package node
 
 import (
 	"context"
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/t0sic/D7024E-Kademlia/internal/kademlia"
@@ -25,6 +28,9 @@ type Node struct {
 	Server       kadnet.Network
 	RoutingTable *kademlia.RoutingTable
 	Config       NodeConfig
+	// simple local storage for PUT/STORE operations (in-memory)
+	store   map[string][]byte
+	storeMu sync.RWMutex
 }
 
 func CreateNode(config NodeConfig) *Node {
@@ -180,6 +186,28 @@ func (n *Node) AddContact(c kademlia.Contact) {
 			fmt.Printf("PING -> %s failed: %v\n", evictCandidate.Address.String(), err)
 		}
 	}
+}
+
+// Put stores the provided data locally and returns the SHA-1 hash bytes for the stored value.
+func (n *Node) Put(data []byte) ([]byte, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("cannot store empty data")
+	}
+
+	h := sha1.Sum(data)
+	key := hex.EncodeToString(h[:])
+
+	// store a copy of the data under the hex key
+	n.storeMu.Lock()
+	if n.store == nil {
+		n.store = make(map[string][]byte)
+	}
+	b := make([]byte, len(data))
+	copy(b, data)
+	n.store[key] = b
+	n.storeMu.Unlock()
+
+	return h[:], nil
 }
 
 // IterativeFindNode runs the Kademlia iterative FIND_NODE lookup.
