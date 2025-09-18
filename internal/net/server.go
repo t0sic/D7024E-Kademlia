@@ -20,6 +20,13 @@ const MSG_PONG = "PONG"
 const MSG_NODES = "NODES"
 const MSG_FIND_NODE = "FIND_NODE"
 
+const MSG_STORE = "STORE"
+const MSG_STORED = "STORED"
+
+const MSG_GET = "GET"
+const MSG_VALUE = "VALUE"
+const MSG_NOT_FOUND = "NOT_FOUND"
+
 // WAITER PROTOCOL
 type waiter struct {
 	ch chan Message

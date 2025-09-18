@@ -62,6 +62,8 @@ func CreateNode(config NodeConfig) *Node {
 	node.Server.On(kadnet.MSG_PING, node.HandlePing)
 	node.Server.On(kadnet.MSG_PONG, node.HandlePong)
 	node.Server.On(kadnet.MSG_FIND_NODE, node.HandleFindNode)
+	node.Server.On(kadnet.MSG_STORE, node.HandleStore)
+	node.Server.On(kadnet.MSG_GET, node.HandleGet)
 
 	go func() {
 		if err := node.Server.Start(); err != nil {
@@ -176,6 +178,69 @@ func (n *Node) HandlePing(from *net.UDPAddr, msg kadnet.Message) (*kadnet.Messag
 
 }
 
+// handle store
+func (n *Node) HandleStore(from *net.UDPAddr, msg kadnet.Message) (*kadnet.Message, error) {
+	if len(msg.Args) < 3 {
+		return nil, fmt.Errorf("STORE missing args: want <fromID> <keyHex> <valueHex>")
+	}
+
+	fromID, err := util.ParseHexID(msg.Args[0])
+	if err != nil {
+		return nil, fmt.Errorf("STORE bad fromID: %w", err)
+	}
+
+	_ = fromID
+
+	keyHex := msg.Args[1]
+	valHex := msg.Args[2]
+
+	value, err := hex.DecodeString(valHex)
+	if err != nil {
+		return nil, fmt.Errorf("STORE value not hex: %w", err)
+	}
+
+	n.storeMu.Lock()
+	if n.store == nil {
+		n.store = make(map[string][]byte)
+	}
+	buf := make([]byte, len(value))
+	copy(buf, value)
+	n.store[keyHex] = buf
+	n.storeMu.Unlock()
+
+	// Ack
+	return &kadnet.Message{
+		Type:  kadnet.MSG_STORED,
+		RPCID: msg.RPCID,
+		Args:  []string{n.ID.String(), keyHex},
+	}, nil
+}
+
+func (n *Node) HandleGet(from *net.UDPAddr, msg kadnet.Message) (*kadnet.Message, error) {
+	if len(msg.Args) < 2 {
+		return nil, fmt.Errorf("GET missing args: want <fromID> <keyHex>")
+	}
+	keyHex := msg.Args[1]
+
+	n.storeMu.RLock()
+	val, ok := n.store[keyHex]
+	n.storeMu.RUnlock()
+
+	if !ok {
+		return &kadnet.Message{
+			Type:  kadnet.MSG_NOT_FOUND,
+			RPCID: msg.RPCID,
+			Args:  []string{n.ID.String(), keyHex},
+		}, nil
+	}
+
+	return &kadnet.Message{
+		Type:  kadnet.MSG_VALUE,
+		RPCID: msg.RPCID,
+		Args:  []string{n.ID.String(), keyHex, hex.EncodeToString(val)},
+	}, nil
+}
+
 func (n *Node) AddContact(c kademlia.Contact) {
 	evictCandidate := n.RoutingTable.AddContact(c)
 	if evictCandidate != nil {
@@ -194,19 +259,34 @@ func (n *Node) Put(data []byte) ([]byte, error) {
 		return nil, fmt.Errorf("cannot store empty data")
 	}
 
+	// 1) key = sha1(data) as hex
 	h := sha1.Sum(data)
-	key := hex.EncodeToString(h[:])
+	keyHex := hex.EncodeToString(h[:])
 
-	// store a copy of the data under the hex key
+	// 2) lookup k-closest to key
+	keyID, err := util.ParseHexID(keyHex)
+	if err != nil {
+		return nil, fmt.Errorf("parse key: %w", err)
+	}
+	timeout := 800 * time.Millisecond
+	closest := n.IterativeFindNode(keyID, timeout)
+
+	// 3) send STORE to each
+	for _, c := range closest {
+		_ = n.SendStoreSync(c, keyHex, data, timeout)
+	}
+
+	// 4) also store locally
 	n.storeMu.Lock()
 	if n.store == nil {
 		n.store = make(map[string][]byte)
 	}
 	b := make([]byte, len(data))
 	copy(b, data)
-	n.store[key] = b
+	n.store[keyHex] = b
 	n.storeMu.Unlock()
 
+	// 5) return same as before so CLI prints hex
 	return h[:], nil
 }
 
@@ -283,6 +363,74 @@ func (n *Node) IterativeFindNode(target util.ID, timeout time.Duration) []kademl
 	}
 
 	return shortlist
+}
+
+// IterativeFindValue returnerar (value, fromContact, error).
+// fromContact == nil betyder att värdet hittades lokalt.
+func (n *Node) IterativeFindValue(ctx context.Context, keyID util.ID, perNodeTimeout time.Duration) ([]byte, *kademlia.Contact, error) {
+	keyHex := keyID.String()
+
+	// 0) Lokal koll — ingen Contact skapas
+	// n.storeMu.RLock()
+	// if val, ok := n.store[keyHex]; ok {
+	// 	out := make([]byte, len(val))
+	// 	copy(out, val)
+	// 	n.storeMu.RUnlock()
+	// 	return out, nil, nil
+	// }
+	// n.storeMu.RUnlock()
+
+	// 1) Hämta k-närmsta via din befintliga iterative FIND_NODE
+	closest := n.IterativeFindNode(keyID, perNodeTimeout)
+	if len(closest) == 0 {
+		return nil, nil, fmt.Errorf("no closest contacts for %s", keyHex)
+	}
+
+	// 2) Fråga i ALPHA-vågor parallellt. Bryt på första VALUE.
+	for i := 0; i < len(closest); i += kademlia.ALPHA {
+		end := i + kademlia.ALPHA
+		if end > len(closest) {
+			end = len(closest)
+		}
+		batch := closest[i:end]
+
+		type res struct {
+			val  []byte
+			from kademlia.Contact
+			ok   bool
+			err  error
+		}
+		resCh := make(chan res, len(batch))
+		var wg sync.WaitGroup
+
+		for _, c := range batch {
+			c := c // capture
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				val, found, err := n.SendGetSync(c, keyHex, perNodeTimeout)
+				if err != nil {
+					resCh <- res{nil, c, false, err}
+					return
+				}
+				if found {
+					resCh <- res{val, c, true, nil}
+					return
+				}
+				resCh <- res{nil, c, false, nil}
+			}()
+		}
+
+		go func() { wg.Wait(); close(resCh) }()
+
+		for r := range resCh {
+			if r.ok && r.err == nil {
+				return r.val, &r.from, nil
+			}
+		}
+	}
+
+	return nil, nil, fmt.Errorf("value %s not found", keyHex)
 }
 
 // contains checks if a Contact with same ID exists in slice

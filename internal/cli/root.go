@@ -49,6 +49,7 @@ func replRootCmd() *cobra.Command {
 	r.AddCommand(cmdExit)
 	r.AddCommand(cmdTest)
 	r.AddCommand(cmdPut)
+	r.AddCommand(cmdGet)
 	return r
 }
 
