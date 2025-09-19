@@ -367,18 +367,8 @@ func (n *Node) IterativeFindNode(target util.ID, timeout time.Duration) []kademl
 
 // IterativeFindValue returnerar (value, fromContact, error).
 // fromContact == nil betyder att värdet hittades lokalt.
-func (n *Node) IterativeFindValue(ctx context.Context, keyID util.ID, perNodeTimeout time.Duration) ([]byte, *kademlia.Contact, error) {
+func (n *Node) IterativeFindValue(keyID util.ID, perNodeTimeout time.Duration) ([]byte, *kademlia.Contact, error) {
 	keyHex := keyID.String()
-
-	// 0) Lokal koll — ingen Contact skapas
-	// n.storeMu.RLock()
-	// if val, ok := n.store[keyHex]; ok {
-	// 	out := make([]byte, len(val))
-	// 	copy(out, val)
-	// 	n.storeMu.RUnlock()
-	// 	return out, nil, nil
-	// }
-	// n.storeMu.RUnlock()
 
 	// 1) Hämta k-närmsta via din befintliga iterative FIND_NODE
 	closest := n.IterativeFindNode(keyID, perNodeTimeout)
@@ -404,10 +394,7 @@ func (n *Node) IterativeFindValue(ctx context.Context, keyID util.ID, perNodeTim
 		var wg sync.WaitGroup
 
 		for _, c := range batch {
-			c := c // capture
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				val, found, err := n.SendGetSync(c, keyHex, perNodeTimeout)
 				if err != nil {
 					resCh <- res{nil, c, false, err}
@@ -418,7 +405,7 @@ func (n *Node) IterativeFindValue(ctx context.Context, keyID util.ID, perNodeTim
 					return
 				}
 				resCh <- res{nil, c, false, nil}
-			}()
+			})
 		}
 
 		go func() { wg.Wait(); close(resCh) }()

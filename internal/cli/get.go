@@ -25,7 +25,7 @@ var cmdGet = &cobra.Command{
 			return fmt.Errorf("invalid hash: %w", err)
 		}
 
-		val, from, err := n.IterativeFindValue(cmd.Context(), keyID, 800*time.Millisecond)
+		val, from, err := n.IterativeFindValue(keyID, 800*time.Millisecond)
 		if err != nil {
 			return err
 		}

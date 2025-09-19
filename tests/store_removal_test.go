@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"context"
 	"encoding/hex"
 	"net"
 	"testing"
@@ -37,7 +36,7 @@ func TestStoreAndRetrieve(t *testing.T) {
 	}
 
 	time.Sleep(100 * time.Millisecond)
-	val, _, err := b.IterativeFindValue(context.Background(), key, 800*time.Millisecond)
+	val, _, err := b.IterativeFindValue(key, 800*time.Millisecond)
 	if err != nil || val == nil {
 		t.Fatalf("B failed to find value: err=%v val=%v", err, val)
 	}
@@ -59,20 +58,21 @@ func TestRemoveNodeWithStoredValue(t *testing.T) {
 	})
 	defer b.Server.Close()
 
-	// store a value on A via HandleStore (simulate incoming RPC)
-	key := util.NewRandomID()
 	value := []byte("Goodbye, Node A")
-	msg := kadnet.Message{
-		Type: kadnet.MSG_STORE,
-		Args: []string{a.ID.String(), key.String(), hex.EncodeToString(value)},
+	keyBytes, err := a.Put(value)
+
+	if err != nil {
+		t.Fatalf("Put failed: %v", err)
 	}
-	if _, err := a.HandleStore(nil, msg); err != nil {
-		t.Fatalf("HandleStore failed: %v", err)
+
+	key, err := util.ParseHexID(hex.EncodeToString(keyBytes[:]))
+	if err != nil {
+		t.Fatalf("Failed to parse hash: %v", err)
 	}
 
 	// ensure B can find the value initially
 	time.Sleep(50 * time.Millisecond)
-	if val, _, err := b.IterativeFindValue(context.Background(), key, 800*time.Millisecond); err != nil || val == nil {
+	if val, _, err := b.IterativeFindValue(key, 800*time.Millisecond); err != nil || val == nil {
 		t.Fatalf("Expected B to find value before removal, err=%v val=%v", err, val)
 	}
 
@@ -85,7 +85,7 @@ func TestRemoveNodeWithStoredValue(t *testing.T) {
 	b.RoutingTable.RemoveContact(c)
 
 	time.Sleep(50 * time.Millisecond)
-	if _, _, err := b.IterativeFindValue(context.Background(), key, 200*time.Millisecond); err == nil {
+	if _, _, err := b.IterativeFindValue(key, 200*time.Millisecond); err == nil {
 		t.Fatalf("Expected B to NOT find value after A removal, but lookup succeeded")
 	}
 }
