@@ -12,7 +12,5 @@ type Network interface {
 	Close() error
 	Addr() *net.UDPAddr
 
-	Send(to *net.UDPAddr, msg Message) error
-
 	SendAndWait(to *net.UDPAddr, msg Message, timeout time.Duration) (Message, error)
 }

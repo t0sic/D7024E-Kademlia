@@ -217,6 +217,7 @@ func (n *Node) HandleStore(from *net.UDPAddr, msg kadnet.Message) (*kadnet.Messa
 }
 
 func (n *Node) HandleGet(from *net.UDPAddr, msg kadnet.Message) (*kadnet.Message, error) {
+	fmt.Println("Received GET from", from.String(), "with args:", msg.Args)
 	if len(msg.Args) < 2 {
 		return nil, fmt.Errorf("GET missing args: want <fromID> <keyHex>")
 	}
@@ -255,6 +256,7 @@ func (n *Node) AddContact(c kademlia.Contact) {
 
 // Put stores the provided data locally and returns the SHA-1 hash bytes for the stored value.
 func (n *Node) Put(data []byte) ([]byte, error) {
+	fmt.Println("Recieved PUT with data length:", len(data))
 	if len(data) == 0 {
 		return nil, fmt.Errorf("cannot store empty data")
 	}

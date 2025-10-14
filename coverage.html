@@ -1,0 +1,1529 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>kademlia: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/t0sic/D7024E-Kademlia/internal/kademlia/bucket.go (93.5%)</option>
+				
+				<option value="file1">github.com/t0sic/D7024E-Kademlia/internal/kademlia/contact.go (69.0%)</option>
+				
+				<option value="file2">github.com/t0sic/D7024E-Kademlia/internal/kademlia/routingtable.go (100.0%)</option>
+				
+				<option value="file3">github.com/t0sic/D7024E-Kademlia/internal/net/mock_udp_server.go (57.4%)</option>
+				
+				<option value="file4">github.com/t0sic/D7024E-Kademlia/internal/net/server.go (0.0%)</option>
+				
+				<option value="file5">github.com/t0sic/D7024E-Kademlia/internal/node/message.go (82.5%)</option>
+				
+				<option value="file6">github.com/t0sic/D7024E-Kademlia/internal/node/node.go (84.7%)</option>
+				
+				<option value="file7">github.com/t0sic/D7024E-Kademlia/internal/util/id.go (86.7%)</option>
+				
+				<option value="file8">github.com/t0sic/D7024E-Kademlia/internal/util/random.go (85.7%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package kademlia
+
+import (
+        "container/list"
+
+        "github.com/t0sic/D7024E-Kademlia/internal/util"
+)
+
+// bucket definition
+// contains a List
+type Bucket struct {
+        list *list.List
+}
+
+// newBucket returns a new instance of a bucket
+func newBucket() *Bucket <span class="cov8" title="1">{
+        bucket := &amp;Bucket{}
+        bucket.list = list.New()
+        return bucket
+}</span>
+
+// isFull returns true if the bucket is full
+func (bucket *Bucket) isFull() bool <span class="cov8" title="1">{
+        return bucket.list.Len() &gt;= K
+}</span>
+
+// GetLeastRecentlySeen returns the least recently seen Contact in the bucket
+func (bucket *Bucket) GetLeastRecentlySeen() *Contact <span class="cov8" title="1">{
+        if bucket.list.Len() == 0 </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+        <span class="cov8" title="1">elt := bucket.list.Back()
+        contact := elt.Value.(Contact)
+        return &amp;contact</span>
+}
+
+// RemoveContact removes the Contact from the bucket
+func (bucket *Bucket) RemoveContact(contact Contact) <span class="cov8" title="1">{
+        var element *list.Element
+        for e := bucket.list.Front(); e != nil; e = e.Next() </span><span class="cov8" title="1">{
+                nodeID := e.Value.(Contact).ID
+                if (contact).ID.Equals(nodeID) </span><span class="cov8" title="1">{
+                        element = e
+                }</span>
+        }
+        <span class="cov8" title="1">if element != nil </span><span class="cov8" title="1">{
+                bucket.list.Remove(element)
+        }</span>
+}
+
+// AddContact adds the Contact to the front of the bucket
+// or moves it to the front of the bucket if it already existed
+func (bucket *Bucket) AddContact(contact Contact) <span class="cov8" title="1">{
+        var element *list.Element
+        for e := bucket.list.Front(); e != nil; e = e.Next() </span><span class="cov8" title="1">{
+                nodeID := e.Value.(Contact).ID
+
+                if (contact).ID.Equals(nodeID) </span><span class="cov8" title="1">{
+                        element = e
+                }</span>
+        }
+
+        <span class="cov8" title="1">if element == nil </span><span class="cov8" title="1">{
+                if bucket.list.Len() &lt; K </span><span class="cov8" title="1">{
+                        bucket.list.PushFront(contact)
+                }</span>
+        } else<span class="cov8" title="1"> {
+                bucket.list.MoveToFront(element)
+        }</span>
+}
+
+// GetContactAndCalcDistance returns an array of Contacts where
+// the distance has already been calculated
+func (bucket *Bucket) GetContactAndCalcDistance(target *util.ID) []Contact <span class="cov8" title="1">{
+        var contacts []Contact
+
+        for elt := bucket.list.Front(); elt != nil; elt = elt.Next() </span><span class="cov8" title="1">{
+                contact := elt.Value.(Contact)
+                contacts = append(contacts, contact)
+        }</span>
+
+        <span class="cov8" title="1">return contacts</span>
+}
+
+// Len return the size of the bucket
+func (bucket *Bucket) Len() int <span class="cov0" title="0">{
+        return bucket.list.Len()
+}</span>
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package kademlia
+
+import (
+        "fmt"
+        "net"
+        "sort"
+        "strings"
+
+        "github.com/t0sic/D7024E-Kademlia/internal/util"
+)
+
+// Contact definition
+// stores the util.ID, the ip address and the distance
+type Contact struct {
+        ID       *util.ID
+        Address  net.UDPAddr
+        Distance *util.ID
+}
+
+// NewContact returns a new instance of a Contact
+func NewContact(id *util.ID, address *net.UDPAddr) Contact <span class="cov8" title="1">{
+        return Contact{id, *address, nil}
+}</span>
+
+func NewContactWithDistance(ref *util.ID, address *net.UDPAddr, from *util.ID) Contact <span class="cov8" title="1">{
+        distance := from.CalcDistance(ref)
+        return Contact{
+                ID:       from,
+                Address:  *address,
+                Distance: distance,
+        }
+}</span>
+
+// CalcDistance calculates the distance to the target and
+// fills the contacts distance field
+func (contact *Contact) CalcDistance(target *util.ID) <span class="cov8" title="1">{
+        contact.Distance = contact.ID.CalcDistance(target)
+}</span>
+
+// Less returns true if contact.distance &lt; otherContact.distance
+func (contact *Contact) Less(otherContact *Contact) bool <span class="cov8" title="1">{
+        return contact.Distance.Less(otherContact.Distance)
+}</span>
+
+// String returns a simple string representation of a Contact
+func (contact *Contact) String() string <span class="cov8" title="1">{
+        return fmt.Sprintf(`contact("%s", "%s")`, contact.ID.String(), contact.Address.String())
+}</span>
+
+// ContactCandidates definition
+// stores an array of Contacts
+type ContactCandidates struct {
+        contacts []Contact
+}
+
+// Append an array of Contacts to the ContactCandidates
+func (candidates *ContactCandidates) Append(contacts []Contact) <span class="cov8" title="1">{
+        candidates.contacts = append(candidates.contacts, contacts...)
+}</span>
+
+// GetContacts returns the first count number of Contacts
+func (candidates *ContactCandidates) GetContacts(count int) []Contact <span class="cov8" title="1">{
+        if count &gt; len(candidates.contacts) </span><span class="cov8" title="1">{
+                count = len(candidates.contacts)
+        }</span>
+        <span class="cov8" title="1">return candidates.contacts[:count]</span>
+}
+
+// Sort the Contacts in ContactCandidates
+func (candidates *ContactCandidates) Sort() <span class="cov8" title="1">{
+        sort.Sort(candidates)
+}</span>
+
+// Len returns the length of the ContactCandidates
+func (candidates *ContactCandidates) Len() int <span class="cov8" title="1">{
+        return len(candidates.contacts)
+}</span>
+
+// Swap the position of the Contacts at i and j
+// WARNING does not check if either i or j is within range
+func (candidates *ContactCandidates) Swap(i, j int) <span class="cov8" title="1">{
+        candidates.contacts[i], candidates.contacts[j] = candidates.contacts[j], candidates.contacts[i]
+}</span>
+
+// Less returns true if the Contact at index i is smaller than
+// the Contact at index j
+func (candidates *ContactCandidates) Less(i, j int) bool <span class="cov8" title="1">{
+        return candidates.contacts[i].Less(&amp;candidates.contacts[j])
+}</span>
+
+func EncodeContactToken(c Contact) string <span class="cov8" title="1">{
+        idHex := c.ID.String()
+        // Prefer UDPAddr.String() — it handles IPv6 brackets automatically.
+        addr := c.Address.String()
+        return idHex + "@" + addr
+}</span>
+
+func DecodeContactToken(tok string) (*Contact, error) <span class="cov8" title="1">{
+        parts := strings.SplitN(tok, "@", 2)
+        if len(parts) != 2 </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("bad contact token %q (want &lt;hexID&gt;@&lt;host:port&gt;)", tok)
+        }</span>
+        <span class="cov8" title="1">pid, err := util.ParseHexID(parts[0])
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("bad id in token %q: %w", tok, err)
+        }</span>
+        <span class="cov8" title="1">addr, err := net.ResolveUDPAddr("udp", parts[1])
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("bad addr in token %q: %w", tok, err)
+        }</span>
+        <span class="cov8" title="1">c := NewContact(&amp;pid, addr)
+        return &amp;c, nil</span>
+}
+
+func DecodeContactTokenWithDistance(tok string, ref *util.ID) (*Contact, error) <span class="cov8" title="1">{
+        c, err := DecodeContactToken(tok)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">c.CalcDistance(ref)
+        return c, nil</span>
+}
+
+func EncodeContactsForArgs(contacts []Contact) []string <span class="cov0" title="0">{
+        out := make([]string, 0, len(contacts))
+        for _, c := range contacts </span><span class="cov0" title="0">{
+                out = append(out, EncodeContactToken(c))
+        }</span>
+        <span class="cov0" title="0">return out</span>
+}
+
+func DecodeContactsFromArgs(args []string, ref *util.ID) []Contact <span class="cov0" title="0">{
+        out := make([]Contact, 0, len(args))
+        for _, tok := range args </span><span class="cov0" title="0">{
+                if c, err := DecodeContactTokenWithDistance(tok, ref); err == nil </span><span class="cov0" title="0">{
+                        out = append(out, *c)
+                }</span>
+        }
+        <span class="cov0" title="0">return out</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package kademlia
+
+import (
+        "sync"
+
+        "github.com/t0sic/D7024E-Kademlia/internal/util"
+)
+
+const K = 20
+const ALPHA = 3
+
+// RoutingTable definition
+// keeps a refrence contact of me and an array of buckets
+type RoutingTable struct {
+        mu      sync.RWMutex
+        me      Contact
+        buckets [util.IDBytes * 8]*Bucket
+}
+
+// createRoutingTable returns a new instance of a RoutingTable
+func CreateRoutingTable(me Contact) *RoutingTable <span class="cov8" title="1">{
+        routingTable := &amp;RoutingTable{}
+        for i := 0; i &lt; util.IDBytes*8; i++ </span><span class="cov8" title="1">{
+                routingTable.buckets[i] = newBucket()
+        }</span>
+        <span class="cov8" title="1">routingTable.me = me
+        return routingTable</span>
+}
+
+// AddContact add a new contact to the correct Bucket
+func (routingTable *RoutingTable) AddContact(contact Contact) *Contact <span class="cov8" title="1">{
+        routingTable.mu.Lock()
+        defer routingTable.mu.Unlock()
+        bucketIndex := routingTable.getBucketIndex(contact.ID)
+        bucket := routingTable.buckets[bucketIndex]
+
+        if !bucket.isFull() </span><span class="cov8" title="1">{
+                bucket.AddContact(contact)
+                return nil
+        }</span>
+        <span class="cov8" title="1">return bucket.GetLeastRecentlySeen()</span>
+}
+
+// RemoveContact removes a contact from the correct Bucket
+func (routingTable *RoutingTable) RemoveContact(contact Contact) <span class="cov8" title="1">{
+        routingTable.mu.Lock()
+        defer routingTable.mu.Unlock()
+        bucketIndex := routingTable.getBucketIndex(contact.ID)
+        bucket := routingTable.buckets[bucketIndex]
+
+        bucket.RemoveContact(contact)
+}</span>
+
+// FindClosestContacts finds the count closest Contacts to the target in the RoutingTable
+func (routingTable *RoutingTable) FindClosestContacts(target *util.ID, count int) []Contact <span class="cov8" title="1">{
+        var candidates ContactCandidates
+        bucketIndex := routingTable.getBucketIndex(target)
+        bucket := routingTable.buckets[bucketIndex]
+
+        routingTable.mu.RLock()
+        candidates.Append(bucket.GetContactAndCalcDistance(target))
+
+        for i := 1; (bucketIndex-i &gt;= 0 || bucketIndex+i &lt; util.IDBytes*8) &amp;&amp; candidates.Len() &lt; count; i++ </span><span class="cov8" title="1">{
+                if bucketIndex-i &gt;= 0 </span><span class="cov8" title="1">{
+                        bucket = routingTable.buckets[bucketIndex-i]
+                        candidates.Append(bucket.GetContactAndCalcDistance(target))
+                }</span>
+                <span class="cov8" title="1">if bucketIndex+i &lt; util.IDBytes*8 </span><span class="cov8" title="1">{
+                        bucket = routingTable.buckets[bucketIndex+i]
+                        candidates.Append(bucket.GetContactAndCalcDistance(target))
+                }</span>
+        }
+        <span class="cov8" title="1">routingTable.mu.RUnlock()
+
+        candidates.Sort()
+
+        if count &gt; candidates.Len() </span><span class="cov8" title="1">{
+                count = candidates.Len()
+        }</span>
+
+        <span class="cov8" title="1">return candidates.GetContacts(count)</span>
+}
+
+// getBucketIndex get the correct Bucket index for the KademliaID
+func (routingTable *RoutingTable) getBucketIndex(id *util.ID) int <span class="cov8" title="1">{
+        distance := id.CalcDistance(routingTable.me.ID)
+        for i := 0; i &lt; util.IDBytes; i++ </span><span class="cov8" title="1">{
+                for j := 0; j &lt; 8; j++ </span><span class="cov8" title="1">{
+                        if (distance[i]&gt;&gt;uint8(7-j))&amp;0x1 != 0 </span><span class="cov8" title="1">{
+                                return i*8 + j
+                        }</span>
+                }
+        }
+
+        <span class="cov8" title="1">return util.IDBytes*8 - 1</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package net
+
+import (
+        "fmt"
+        "net"
+        "strings"
+        "sync"
+        "time"
+
+        "github.com/t0sic/D7024E-Kademlia/internal/util"
+)
+
+var (
+        mockRegMu sync.RWMutex
+        mockReg   = map[string]*MockUDP{}
+)
+
+type MockUDP struct {
+        addr     *net.UDPAddr
+        handlers map[string]Handler
+}
+
+func NewMockUDP(addr string) *MockUDP <span class="cov8" title="1">{
+        udp, err := net.ResolveUDPAddr("udp", addr)
+        if err != nil </span><span class="cov0" title="0">{
+                panic(err)</span>
+        }
+        <span class="cov8" title="1">m := &amp;MockUDP{addr: udp, handlers: map[string]Handler{}}
+
+        mockRegMu.Lock()
+        mockReg[udp.String()] = m
+        mockRegMu.Unlock()
+
+        return m</span>
+}
+
+func (m *MockUDP) Addr() *net.UDPAddr <span class="cov0" title="0">{ return m.addr }</span>
+func (m *MockUDP) Start() error       <span class="cov8" title="1">{ return nil }</span>
+func (m *MockUDP) Close() error <span class="cov8" title="1">{
+        mockRegMu.Lock()
+        delete(mockReg, m.addr.String())
+        mockRegMu.Unlock()
+        return nil
+}</span>
+
+func (m *MockUDP) On(typ string, h Handler) <span class="cov8" title="1">{
+        m.handlers[strings.ToUpper(strings.TrimSpace(typ))] = h
+}</span>
+
+func (m *MockUDP) Send(to *net.UDPAddr, msg Message) error <span class="cov0" title="0">{
+        mockRegMu.RLock()
+        dst := mockReg[to.String()]
+        mockRegMu.RUnlock()
+        if dst == nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("no mock peer at %s", to)
+        }</span>
+
+        <span class="cov0" title="0">h := dst.handlers[msg.Type]
+        if h == nil </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+        <span class="cov0" title="0">reply, err := h(m.addr, msg)
+        if err != nil || reply == nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov0" title="0">if rh := m.handlers[reply.Type]; rh != nil </span><span class="cov0" title="0">{
+                _, _ = rh(dst.addr, *reply)
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (m *MockUDP) SendAndWait(to *net.UDPAddr, msg Message, timeout time.Duration) (Message, error) <span class="cov8" title="1">{
+        // mimic UDP SendAndWait: set an RPCID, call handler, return reply with same RPCID
+        if msg.RPCID == "" </span><span class="cov8" title="1">{
+                msg.RPCID = util.NewRandomID().Hex()
+        }</span>
+
+        <span class="cov8" title="1">mockRegMu.RLock()
+        dst := mockReg[to.String()]
+        mockRegMu.RUnlock()
+        if dst == nil </span><span class="cov8" title="1">{
+                return Message{}, fmt.Errorf("no mock peer at %s", to)
+        }</span>
+
+        <span class="cov8" title="1">h := dst.handlers[msg.Type]
+        if h == nil </span><span class="cov0" title="0">{
+                return Message{}, fmt.Errorf("no handler for %s at %s", msg.Type, to)
+        }</span>
+
+        <span class="cov8" title="1">reply, err := h(m.addr, msg)
+        if err != nil </span><span class="cov0" title="0">{
+                return Message{}, err
+        }</span>
+        <span class="cov8" title="1">if reply == nil </span><span class="cov0" title="0">{
+                return Message{}, fmt.Errorf("no reply from %s", to)
+        }</span>
+        // echo RPCID like the real protocol expects
+        <span class="cov8" title="1">if reply.RPCID == "" </span><span class="cov0" title="0">{
+                reply.RPCID = msg.RPCID
+        }</span>
+        <span class="cov8" title="1">return *reply, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package net
+
+import (
+        "fmt"
+        "net"
+        "strings"
+        "sync"
+        "time"
+
+        "github.com/t0sic/D7024E-Kademlia/internal/util"
+)
+
+const BUFFER_SIZE = 4096
+const READ_TIMEOUT = 5 * time.Second
+const WRITE_TIMEOUT = 5 * time.Second
+
+// MESSAGE TYPES
+const MSG_PING = "PING"
+const MSG_PONG = "PONG"
+const MSG_NODES = "NODES"
+const MSG_FIND_NODE = "FIND_NODE"
+
+const MSG_STORE = "STORE"
+const MSG_STORED = "STORED"
+
+const MSG_GET = "GET"
+const MSG_VALUE = "VALUE"
+const MSG_NOT_FOUND = "NOT_FOUND"
+
+// WAITER PROTOCOL
+type waiter struct {
+        ch chan Message
+}
+
+// PROTOCOL
+type Message struct {
+        Type  string
+        RPCID string
+        Args  []string
+}
+
+func ParseMessage(s string) (Message, error) <span class="cov0" title="0">{
+        s = strings.TrimSpace(s)
+        if s == "" </span><span class="cov0" title="0">{
+                return Message{}, fmt.Errorf("empty message")
+        }</span>
+        <span class="cov0" title="0">parts := strings.Fields(s)
+        msg := Message{Type: parts[0]}
+        rest := parts[1:]
+        if len(rest) &gt; 0 &amp;&amp; strings.HasPrefix(rest[0], "#") </span><span class="cov0" title="0">{
+                msg.RPCID = strings.TrimPrefix(rest[0], "#")
+                rest = rest[1:]
+        }</span>
+        <span class="cov0" title="0">msg.Args = rest
+        return msg, nil</span>
+}
+
+func (m Message) String() string <span class="cov0" title="0">{
+        b := strings.Builder{}
+        b.WriteString(m.Type)
+        if m.RPCID != "" </span><span class="cov0" title="0">{
+                b.WriteByte(' ')
+                b.WriteByte('#')
+                b.WriteString(m.RPCID)
+        }</span>
+        <span class="cov0" title="0">if len(m.Args) &gt; 0 </span><span class="cov0" title="0">{
+                b.WriteByte(' ')
+                b.WriteString(strings.Join(m.Args, " "))
+        }</span>
+        <span class="cov0" title="0">return b.String()</span>
+}
+
+// UDP SERVER
+
+// Handler defined how we process incoming messages
+type Handler func(from *net.UDPAddr, msg Message) (*Message, error)
+
+type UDPServer struct {
+        addr *net.UDPAddr
+        conn *net.UDPConn
+
+        closing  bool
+        mu       sync.RWMutex
+        wg       sync.WaitGroup
+        handlers map[string]Handler
+
+        waiters map[string]*waiter
+        wmu     sync.Mutex
+}
+
+// expose bound address (handy for :0)
+func (s *UDPServer) Addr() *net.UDPAddr <span class="cov0" title="0">{ return s.addr }</span>
+
+// simple fire-and-forget wrapper
+func (s *UDPServer) Send(to *net.UDPAddr, msg Message) error <span class="cov0" title="0">{
+        return s.WriteTo(to, msg.String())
+}</span>
+
+// Close shuts down the UDP server connection.
+func (s *UDPServer) Close() error <span class="cov0" title="0">{
+        s.mu.Lock()
+        s.closing = true
+        s.mu.Unlock()
+
+        // Unblock any goroutines waiting on RPC responses
+        s.CancelAllWaiters()
+
+        if s.conn != nil </span><span class="cov0" title="0">{
+                _ = s.conn.Close() // triggers read deadline + loop exit
+        }</span>
+
+        // Wait until Start() returns and wg.Done() executes
+        <span class="cov0" title="0">s.wg.Wait()
+        return nil</span>
+}
+
+func (s *UDPServer) isClosing() bool <span class="cov0" title="0">{
+        s.mu.RLock()
+        defer s.mu.RUnlock()
+        return s.closing
+}</span>
+
+// Initialize the server
+func CreateUDPServer(addr string) *UDPServer <span class="cov0" title="0">{
+        udpAddr, err := net.ResolveUDPAddr("udp", addr)
+        if err != nil </span><span class="cov0" title="0">{
+                panic(err)</span>
+        }
+        <span class="cov0" title="0">return &amp;UDPServer{
+                addr:     udpAddr,
+                handlers: make(map[string]Handler),
+                waiters:  make(map[string]*waiter),
+        }</span>
+}
+
+// RegisterHandler for a specific message type
+func (s *UDPServer) dispatch(from *net.UDPAddr, msg Message) (*Message, error) <span class="cov0" title="0">{
+        s.mu.RLock()
+        h := s.handlers[msg.Type]
+        s.mu.RUnlock()
+
+        if h == nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("no handler for message type: %s", msg.Type)
+        }</span>
+
+        <span class="cov0" title="0">return h(from, msg)</span>
+}
+
+// On registers a handler for a specific message type
+func (s *UDPServer) On(msgType string, h Handler) <span class="cov0" title="0">{
+        s.mu.Lock()
+        defer s.mu.Unlock()
+        s.handlers[strings.ToUpper(strings.TrimSpace(msgType))] = h
+}</span>
+
+// WriteTo sends a message to a specific peer
+func (s *UDPServer) WriteTo(peer *net.UDPAddr, payload string) error <span class="cov0" title="0">{
+        _ = s.conn.SetWriteDeadline(time.Now().Add(WRITE_TIMEOUT))
+        _, err := s.conn.WriteToUDP([]byte(payload), peer)
+        return err
+}</span>
+
+// addWaiter adds a waiter for a specific RPC ID and returns its channel
+func (s *UDPServer) AddWaiter(rpcID string) &lt;-chan Message <span class="cov0" title="0">{
+        ch := make(chan Message, 1)
+        s.wmu.Lock()
+        s.waiters[rpcID] = &amp;waiter{ch: ch}
+        s.wmu.Unlock()
+        return ch
+}</span>
+
+func (s *UDPServer) Wait(rpcID string, timeout time.Duration) (Message, error) <span class="cov0" title="0">{
+        s.wmu.Lock()
+        w, ok := s.waiters[rpcID]
+        s.wmu.Unlock()
+        if !ok </span><span class="cov0" title="0">{
+                return Message{}, fmt.Errorf("no waiter for rpcID=%s", rpcID)
+        }</span>
+
+        <span class="cov0" title="0">select </span>{
+        case msg, ok := &lt;-w.ch:<span class="cov0" title="0">
+                if !ok </span><span class="cov0" title="0">{
+                        return Message{}, fmt.Errorf("waiter closed (server shutting down?)")
+                }</span>
+                <span class="cov0" title="0">return msg, nil</span>
+        case &lt;-time.After(timeout):<span class="cov0" title="0">
+                s.CancelWaiter(rpcID)
+                return Message{}, fmt.Errorf("timeout waiting for rpcID=%s", rpcID)</span>
+        }
+}
+
+// CancelWaiter removes a waiter and closes its channel
+func (s *UDPServer) CancelWaiter(rpcID string) <span class="cov0" title="0">{
+        s.wmu.Lock()
+        if w, ok := s.waiters[rpcID]; ok </span><span class="cov0" title="0">{
+                delete(s.waiters, rpcID)
+                close(w.ch)
+        }</span>
+        <span class="cov0" title="0">s.wmu.Unlock()</span>
+}
+
+// Delivers a message to the corresponding waiter if exists
+func (s *UDPServer) deliverToWaiter(msg Message) bool <span class="cov0" title="0">{
+        if msg.RPCID == "" </span><span class="cov0" title="0">{
+                return false
+        }</span>
+        <span class="cov0" title="0">s.wmu.Lock()
+        w, ok := s.waiters[msg.RPCID]
+        if ok </span><span class="cov0" title="0">{
+                delete(s.waiters, msg.RPCID)
+        }</span>
+        <span class="cov0" title="0">s.wmu.Unlock()
+        if ok </span><span class="cov0" title="0">{
+                w.ch &lt;- msg
+                return true
+        }</span>
+        <span class="cov0" title="0">return false</span>
+}
+
+// Ensures msg.RPCID is set, registers waiter, sends, then waits.
+func (s *UDPServer) SendAndWait(peer *net.UDPAddr, msg Message, timeout time.Duration) (Message, error) <span class="cov0" title="0">{
+        if msg.RPCID == "" </span><span class="cov0" title="0">{
+                msg.RPCID = util.NewRandomID().Hex()
+        }</span>
+        <span class="cov0" title="0">ch := s.AddWaiter(msg.RPCID)
+        _ = ch
+
+        if err := s.WriteTo(peer, msg.String()); err != nil </span><span class="cov0" title="0">{
+                s.CancelWaiter(msg.RPCID)
+                return Message{}, err
+        }</span>
+        <span class="cov0" title="0">return s.Wait(msg.RPCID, timeout)</span>
+}
+
+// Start the server
+func (s *UDPServer) Start() error <span class="cov0" title="0">{
+        conn, err := net.ListenUDP("udp", s.addr)
+        if err != nil </span><span class="cov0" title="0">{
+                panic(err)</span>
+        }
+
+        <span class="cov0" title="0">s.addr = conn.LocalAddr().(*net.UDPAddr)
+        fmt.Println("Starting UDP server on", s.addr.String())
+
+        defer conn.Close()
+
+        s.conn = conn
+
+        buf := make([]byte, BUFFER_SIZE)
+        s.wg.Add(1)
+        defer s.wg.Done()
+
+        for </span><span class="cov0" title="0">{
+
+                s.conn.SetReadDeadline(time.Now().Add(READ_TIMEOUT))
+                n, peer, err := conn.ReadFromUDP(buf)
+                if err != nil </span><span class="cov0" title="0">{
+                        if ne, ok := err.(net.Error); ok &amp;&amp; ne.Timeout() </span><span class="cov0" title="0">{
+                                if s.isClosing() </span><span class="cov0" title="0">{
+                                        return nil
+                                }</span>
+                                // just loop again (keep listening)
+                                <span class="cov0" title="0">continue</span>
+                        }
+                        <span class="cov0" title="0">if strings.Contains(err.Error(), "use of closed network connection") </span><span class="cov0" title="0">{
+                                return nil
+                        }</span>
+                        <span class="cov0" title="0">fmt.Println("UDP read error:", err)
+                        continue</span>
+                }
+
+                <span class="cov0" title="0">raw := strings.TrimSpace(string(buf[:n]))
+                msg, perr := ParseMessage(raw)
+                if perr != nil </span><span class="cov0" title="0">{
+                        fmt.Println("UDP parse error:", perr)
+                        continue</span>
+                }
+
+                <span class="cov0" title="0">if s.deliverToWaiter(msg) </span><span class="cov0" title="0">{
+                        continue</span>
+                }
+
+                <span class="cov0" title="0">reply, rerr := s.dispatch(peer, msg)
+                if rerr != nil </span><span class="cov0" title="0">{
+                        fmt.Println("UDP dispatch error:", rerr)
+                        continue</span>
+                }
+
+                <span class="cov0" title="0">if reply != nil </span><span class="cov0" title="0">{
+                        if err := s.WriteTo(peer, reply.String()); err != nil </span><span class="cov0" title="0">{
+                                fmt.Println("UDP write error:", err)
+                        }</span>
+                }
+
+        }
+}
+
+func (s *UDPServer) CancelAllWaiters() <span class="cov0" title="0">{
+        s.wmu.Lock()
+        for id, w := range s.waiters </span><span class="cov0" title="0">{
+                delete(s.waiters, id)
+                close(w.ch)
+        }</span>
+        <span class="cov0" title="0">s.wmu.Unlock()</span>
+}
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package node
+
+import (
+        "encoding/hex"
+        "fmt"
+        "net"
+        "time"
+
+        "github.com/t0sic/D7024E-Kademlia/internal/kademlia"
+        kadnet "github.com/t0sic/D7024E-Kademlia/internal/net"
+        "github.com/t0sic/D7024E-Kademlia/internal/util"
+)
+
+func (n *Node) PingSync(addr *net.UDPAddr, timeout time.Duration) (util.ID, error) <span class="cov8" title="1">{
+        req := kadnet.Message{
+                Type: kadnet.MSG_PING,
+                Args: []string{n.ID.String()},
+        }
+        resp, err := n.Server.SendAndWait(addr, req, timeout)
+        if err != nil </span><span class="cov8" title="1">{
+                return util.ID{}, err
+        }</span>
+        <span class="cov8" title="1">if resp.Type != kadnet.MSG_PONG || len(resp.Args) &lt; 1 </span><span class="cov0" title="0">{
+                return util.ID{}, fmt.Errorf("unexpected PONG response: %s %v", resp.Type, resp.Args)
+        }</span>
+        <span class="cov8" title="1">peerID, err := util.ParseHexID(resp.Args[0])
+        if err != nil </span><span class="cov0" title="0">{
+                return util.ID{}, fmt.Errorf("invalid peer ID in PONG: %w", err)
+        }</span>
+        <span class="cov8" title="1">return peerID, nil</span>
+}
+
+func (n *Node) FindNodesSync(addr *net.UDPAddr, fromID, target util.ID, timeout time.Duration) ([]kademlia.Contact, error) <span class="cov8" title="1">{
+        req := kadnet.Message{
+                Type: kadnet.MSG_FIND_NODE,
+                Args: []string{fromID.String(), target.String()},
+        }
+        resp, err := n.Server.SendAndWait(addr, req, timeout)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">if resp.Type != kadnet.MSG_NODES || len(resp.Args) &lt; 1 </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("bad NODES response")
+        }</span>
+        // resp.Args: [responderID, id@host:port, ...]
+        <span class="cov8" title="1">contacts := make([]kademlia.Contact, 0, len(resp.Args)-1)
+        tgt := target // distance relative to lookup target
+        for _, tok := range resp.Args[1:] </span><span class="cov8" title="1">{
+                if c, err := kademlia.DecodeContactTokenWithDistance(tok, &amp;tgt); err == nil </span><span class="cov8" title="1">{
+                        contacts = append(contacts, *c)
+                }</span>
+        }
+        <span class="cov8" title="1">return contacts, nil</span>
+}
+
+func (n *Node) SendGetSync(to kademlia.Contact, keyHex string, timeout time.Duration) ([]byte, bool, error) <span class="cov8" title="1">{
+        req := kadnet.Message{
+                Type: kadnet.MSG_GET,
+                Args: []string{
+                        n.ID.String(),
+                        keyHex,
+                },
+        }
+        resp, err := n.Server.SendAndWait(&amp;to.Address, req, timeout)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, false, err
+        }</span>
+
+        <span class="cov8" title="1">switch resp.Type </span>{
+        case kadnet.MSG_VALUE:<span class="cov8" title="1">
+                if len(resp.Args) &lt; 3 </span><span class="cov0" title="0">{
+                        return nil, false, fmt.Errorf("VALUE malformed response")
+                }</span>
+                <span class="cov8" title="1">valHex := resp.Args[2]
+                b, err := hex.DecodeString(valHex)
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, false, fmt.Errorf("VALUE not hex: %w", err)
+                }</span>
+                <span class="cov8" title="1">return b, true, nil</span>
+        case kadnet.MSG_NOT_FOUND:<span class="cov0" title="0">
+                return nil, false, nil</span>
+        default:<span class="cov0" title="0">
+                return nil, false, fmt.Errorf("unexpected response type %q", resp.Type)</span>
+        }
+}
+
+func (n *Node) SendStoreSync(to kademlia.Contact, keyHex string, value []byte, timeout time.Duration) error <span class="cov8" title="1">{
+        valHex := hex.EncodeToString(value)
+        msg := kadnet.Message{
+                Type: kadnet.MSG_STORE,
+                Args: []string{
+                        n.ID.String(),
+                        keyHex,
+                        valHex,
+                },
+        }
+
+        _, err := n.Server.SendAndWait(&amp;to.Address, msg, timeout)
+        return err
+}</span>
+</pre>
+		
+		<pre class="file" id="file6" style="display: none">package node
+
+import (
+        "context"
+        "crypto/sha1"
+        "encoding/hex"
+        "fmt"
+        "net"
+        "sync"
+        "time"
+
+        "github.com/t0sic/D7024E-Kademlia/internal/kademlia"
+        kadnet "github.com/t0sic/D7024E-Kademlia/internal/net"
+        "github.com/t0sic/D7024E-Kademlia/internal/util"
+)
+
+type NodeConfig struct {
+        ID        util.ID
+        Addr      string
+        Bootstrap bool
+        Peers     []string
+        NewNet    func(addr string) kadnet.Network
+}
+
+type Node struct {
+        ID           util.ID
+        Addr         string
+        Server       kadnet.Network
+        RoutingTable *kademlia.RoutingTable
+        Config       NodeConfig
+        // simple local storage for PUT/STORE operations (in-memory)
+        store   map[string][]byte
+        storeMu sync.RWMutex
+}
+
+func CreateNode(config NodeConfig) *Node <span class="cov8" title="1">{
+
+        fmt.Printf("Node ID: %s starting on %s\n", config.ID, config.Addr)
+        if len(config.Peers) &gt; 0 </span><span class="cov8" title="1">{
+                fmt.Printf("Bootstrap peers: %v\n", config.Peers)
+        }</span>
+
+        <span class="cov8" title="1">newNet := config.NewNet
+        if newNet == nil </span><span class="cov0" title="0">{
+                newNet = func(a string) kadnet.Network </span><span class="cov0" title="0">{ return kadnet.CreateUDPServer(a) }</span>
+        }
+
+        <span class="cov8" title="1">udpAddr, err := net.ResolveUDPAddr("udp", config.Addr)
+        if err != nil </span><span class="cov0" title="0">{
+                panic(fmt.Errorf("resolve local addr %q: %w", config.Addr, err))</span>
+        }
+        <span class="cov8" title="1">var contact kademlia.Contact = kademlia.NewContact(&amp;config.ID, udpAddr)
+
+        node := &amp;Node{
+                ID:           config.ID,
+                Addr:         config.Addr,
+                Server:       newNet(config.Addr),
+                RoutingTable: kademlia.CreateRoutingTable(contact),
+                Config:       config,
+        }
+
+        node.Server.On(kadnet.MSG_PING, node.HandlePing)
+        node.Server.On(kadnet.MSG_PONG, node.HandlePong)
+        node.Server.On(kadnet.MSG_FIND_NODE, node.HandleFindNode)
+        node.Server.On(kadnet.MSG_STORE, node.HandleStore)
+        node.Server.On(kadnet.MSG_GET, node.HandleGet)
+
+        go func() </span><span class="cov8" title="1">{
+                if err := node.Server.Start(); err != nil </span><span class="cov0" title="0">{
+                        fmt.Println("UDP server stopped:", err)
+                }</span>
+        }()
+        <span class="cov8" title="1">node.JoinNetwork()
+
+        return node</span>
+}
+
+func (n *Node) JoinNetwork() <span class="cov8" title="1">{
+        fmt.Println("Joining network...")
+        if len(n.Config.Peers) == 0 </span><span class="cov8" title="1">{
+                return
+        }</span>
+
+        <span class="cov8" title="1">for _, peer := range n.Config.Peers </span><span class="cov8" title="1">{
+                addr, err := net.ResolveUDPAddr("udp", peer)
+                if err != nil </span><span class="cov0" title="0">{
+                        fmt.Printf("Resolve %s: %v\n", peer, err)
+                        continue</span>
+                }
+
+                <span class="cov8" title="1">peerID, err := n.PingSync(addr, 800*time.Millisecond)
+                if err != nil </span><span class="cov0" title="0">{
+                        fmt.Printf("PING -&gt; %s failed: %v\n", peer, err)
+                        continue</span>
+                }
+                <span class="cov8" title="1">fmt.Printf("Peer %s is alive (id=%s)\n", peer, peerID.String())
+
+                // Add bootstrap peer explicitly to routing table
+                n.AddContact(kademlia.NewContactWithDistance(&amp;n.ID, addr, &amp;peerID))
+
+                // print result save it in a variable if needed
+                contacts := n.IterativeFindNode(n.ID, 800*time.Millisecond)
+
+                // print contacts
+                for _, c := range contacts </span><span class="cov8" title="1">{
+                        fmt.Printf("Found contact: %s\n", c.String())
+                }</span>
+        }
+}
+
+// FIND_NODE &lt;fromID&gt; &lt;targetID&gt;
+func (n *Node) HandleFindNode(from *net.UDPAddr, msg kadnet.Message) (*kadnet.Message, error) <span class="cov8" title="1">{
+        fmt.Println("Received FIND_NODE from", from.String(), "with args:", msg.Args)
+        if len(msg.Args) == 0 </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("FIND_NODE message missing target ID argument")
+        }</span>
+
+        <span class="cov8" title="1">fromID, err := util.ParseHexID(msg.Args[0])
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("invalid node ID in FIND_NODE message: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">targetID, err := util.ParseHexID(msg.Args[1])
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("invalid target ID in FIND_NODE message: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">n.AddContact(kademlia.NewContactWithDistance(&amp;n.ID, from, &amp;fromID))
+        shortlist := n.RoutingTable.FindClosestContacts(&amp;targetID, kademlia.K)
+
+        // Build: NODES &lt;myID&gt; &lt;id@host:port&gt;...
+        args := []string{n.ID.String()}
+        for _, c := range shortlist </span><span class="cov8" title="1">{
+                // skip the requester and self
+                if c.ID != nil &amp;&amp; (*c.ID == fromID || *c.ID == n.ID) </span><span class="cov8" title="1">{
+                        continue</span>
+                }
+                <span class="cov8" title="1">args = append(args, kademlia.EncodeContactToken(c))</span>
+        }
+
+        <span class="cov8" title="1">return &amp;kadnet.Message{
+                Type:  kadnet.MSG_NODES,
+                RPCID: msg.RPCID,
+                Args:  args,
+        }, nil</span>
+}
+
+func (n *Node) HandlePong(from *net.UDPAddr, msg kadnet.Message) (*kadnet.Message, error) <span class="cov0" title="0">{
+        if len(msg.Args) == 0 </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("PONG message missing node ID argument")
+        }</span>
+        <span class="cov0" title="0">fmt.Printf("Received PONG from %s with node ID %s\n", from.String(), msg.Args[0])
+
+        // Add the contact to the routing table
+        senderID, err := util.ParseHexID(msg.Args[0])
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("invalid node ID in PONG message: %w", err)
+        }</span>
+        <span class="cov0" title="0">n.AddContact(kademlia.NewContactWithDistance(&amp;n.ID, from, &amp;senderID))
+
+        return nil, nil</span> // No reply needed for PONG
+}
+
+func (n *Node) HandlePing(from *net.UDPAddr, msg kadnet.Message) (*kadnet.Message, error) <span class="cov8" title="1">{
+        if len(msg.Args) == 0 </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("PING missing sender ID")
+        }</span>
+        <span class="cov8" title="1">_, err := util.ParseHexID(msg.Args[0])
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("PING bad sender ID: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return &amp;kadnet.Message{
+                Type:  kadnet.MSG_PONG,
+                RPCID: msg.RPCID,
+                Args:  []string{n.ID.String()},
+        }, nil</span>
+
+}
+
+// handle store
+func (n *Node) HandleStore(from *net.UDPAddr, msg kadnet.Message) (*kadnet.Message, error) <span class="cov8" title="1">{
+        if len(msg.Args) &lt; 3 </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("STORE missing args: want &lt;fromID&gt; &lt;keyHex&gt; &lt;valueHex&gt;")
+        }</span>
+
+        <span class="cov8" title="1">fromID, err := util.ParseHexID(msg.Args[0])
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("STORE bad fromID: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">_ = fromID
+
+        keyHex := msg.Args[1]
+        valHex := msg.Args[2]
+
+        value, err := hex.DecodeString(valHex)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("STORE value not hex: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">n.storeMu.Lock()
+        if n.store == nil </span><span class="cov8" title="1">{
+                n.store = make(map[string][]byte)
+        }</span>
+        <span class="cov8" title="1">buf := make([]byte, len(value))
+        copy(buf, value)
+        n.store[keyHex] = buf
+        n.storeMu.Unlock()
+
+        // Ack
+        return &amp;kadnet.Message{
+                Type:  kadnet.MSG_STORED,
+                RPCID: msg.RPCID,
+                Args:  []string{n.ID.String(), keyHex},
+        }, nil</span>
+}
+
+func (n *Node) HandleGet(from *net.UDPAddr, msg kadnet.Message) (*kadnet.Message, error) <span class="cov8" title="1">{
+        if len(msg.Args) &lt; 2 </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("GET missing args: want &lt;fromID&gt; &lt;keyHex&gt;")
+        }</span>
+        <span class="cov8" title="1">keyHex := msg.Args[1]
+
+        n.storeMu.RLock()
+        val, ok := n.store[keyHex]
+        n.storeMu.RUnlock()
+
+        if !ok </span><span class="cov0" title="0">{
+                return &amp;kadnet.Message{
+                        Type:  kadnet.MSG_NOT_FOUND,
+                        RPCID: msg.RPCID,
+                        Args:  []string{n.ID.String(), keyHex},
+                }, nil
+        }</span>
+
+        <span class="cov8" title="1">return &amp;kadnet.Message{
+                Type:  kadnet.MSG_VALUE,
+                RPCID: msg.RPCID,
+                Args:  []string{n.ID.String(), keyHex, hex.EncodeToString(val)},
+        }, nil</span>
+}
+
+func (n *Node) AddContact(c kademlia.Contact) <span class="cov8" title="1">{
+        evictCandidate := n.RoutingTable.AddContact(c)
+        if evictCandidate != nil </span><span class="cov8" title="1">{
+                _, err := n.PingSync(&amp;evictCandidate.Address, 800*time.Millisecond)
+                if err != nil </span><span class="cov8" title="1">{
+                        n.RoutingTable.RemoveContact(*evictCandidate)
+                        n.RoutingTable.AddContact(c)
+                        fmt.Printf("PING -&gt; %s failed: %v\n", evictCandidate.Address.String(), err)
+                }</span>
+        }
+}
+
+// Put stores the provided data locally and returns the SHA-1 hash bytes for the stored value.
+func (n *Node) Put(data []byte) ([]byte, error) <span class="cov8" title="1">{
+        if len(data) == 0 </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("cannot store empty data")
+        }</span>
+
+        // 1) key = sha1(data) as hex
+        <span class="cov8" title="1">h := sha1.Sum(data)
+        keyHex := hex.EncodeToString(h[:])
+
+        // 2) lookup k-closest to key
+        keyID, err := util.ParseHexID(keyHex)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("parse key: %w", err)
+        }</span>
+        <span class="cov8" title="1">timeout := 800 * time.Millisecond
+        closest := n.IterativeFindNode(keyID, timeout)
+
+        // 3) send STORE to each
+        for _, c := range closest </span><span class="cov8" title="1">{
+                _ = n.SendStoreSync(c, keyHex, data, timeout)
+        }</span>
+
+        // 4) also store locally
+        <span class="cov8" title="1">n.storeMu.Lock()
+        if n.store == nil </span><span class="cov8" title="1">{
+                n.store = make(map[string][]byte)
+        }</span>
+        <span class="cov8" title="1">b := make([]byte, len(data))
+        copy(b, data)
+        n.store[keyHex] = b
+        n.storeMu.Unlock()
+
+        // 5) return same as before so CLI prints hex
+        return h[:], nil</span>
+}
+
+// IterativeFindNode runs the Kademlia iterative FIND_NODE lookup.
+// Returns up to kademlia.K closest contacts to the target.
+func (n *Node) IterativeFindNode(target util.ID, timeout time.Duration) []kademlia.Contact <span class="cov8" title="1">{
+        // Start shortlist from routing table
+        shortlist := n.RoutingTable.FindClosestContacts(&amp;target, kademlia.K)
+
+        // Track queried nodes
+        queried := make(map[string]bool)
+
+        progress := true
+        for progress </span><span class="cov8" title="1">{
+                progress = false
+
+                // Select up to ALPHA closest unqueried contacts
+                batch := make([]kademlia.Contact, 0, kademlia.ALPHA)
+                for _, c := range shortlist </span><span class="cov8" title="1">{
+                        if len(batch) &gt;= kademlia.ALPHA </span><span class="cov8" title="1">{
+                                break</span>
+                        }
+                        <span class="cov8" title="1">if !queried[c.ID.String()] </span><span class="cov8" title="1">{
+                                batch = append(batch, c)
+                                queried[c.ID.String()] = true
+                        }</span>
+                }
+
+                // If no new nodes to query, we’re done
+                <span class="cov8" title="1">if len(batch) == 0 </span><span class="cov8" title="1">{
+                        break</span>
+                }
+
+                // Query them in parallel
+                <span class="cov8" title="1">type result struct {
+                        from     kademlia.Contact
+                        contacts []kademlia.Contact
+                        err      error
+                }
+                results := make(chan result, len(batch))
+                for _, c := range batch </span><span class="cov8" title="1">{
+                        go func(c kademlia.Contact) </span><span class="cov8" title="1">{
+                                contacts, err := n.FindNodesSync(&amp;c.Address, n.ID, target, timeout)
+                                if err != nil </span><span class="cov8" title="1">{
+                                        results &lt;- result{from: c, contacts: nil, err: err}
+                                        return
+                                }</span>
+                                <span class="cov8" title="1">results &lt;- result{from: c, contacts: contacts, err: nil}</span>
+                        }(c)
+                }
+
+                // Collect results
+                <span class="cov8" title="1">for i := 0; i &lt; len(batch); i++ </span><span class="cov8" title="1">{
+                        res := &lt;-results
+                        if res.err != nil </span><span class="cov8" title="1">{
+                                continue</span>
+                        }
+                        <span class="cov8" title="1">for _, c := range res.contacts </span><span class="cov8" title="1">{
+                                c.CalcDistance(&amp;target)
+                                n.AddContact(c) // maintain table
+                                // Add if not seen
+                                if !contains(shortlist, c) </span><span class="cov8" title="1">{
+                                        shortlist = append(shortlist, c)
+                                        progress = true
+                                }</span>
+                        }
+                }
+
+                // Sort shortlist by distance to target
+                <span class="cov8" title="1">cand := kademlia.ContactCandidates{}
+                cand.Append(shortlist)
+                cand.Sort()
+                shortlist = cand.GetContacts(kademlia.K)</span>
+        }
+
+        <span class="cov8" title="1">return shortlist</span>
+}
+
+// IterativeFindValue returnerar (value, fromContact, error).
+// fromContact == nil betyder att värdet hittades lokalt.
+func (n *Node) IterativeFindValue(keyID util.ID, perNodeTimeout time.Duration) ([]byte, *kademlia.Contact, error) <span class="cov8" title="1">{
+        keyHex := keyID.String()
+
+        // 1) Hämta k-närmsta via din befintliga iterative FIND_NODE
+        closest := n.IterativeFindNode(keyID, perNodeTimeout)
+        if len(closest) == 0 </span><span class="cov8" title="1">{
+                return nil, nil, fmt.Errorf("no closest contacts for %s", keyHex)
+        }</span>
+
+        // 2) Fråga i ALPHA-vågor parallellt. Bryt på första VALUE.
+        <span class="cov8" title="1">for i := 0; i &lt; len(closest); i += kademlia.ALPHA </span><span class="cov8" title="1">{
+                end := i + kademlia.ALPHA
+                if end &gt; len(closest) </span><span class="cov8" title="1">{
+                        end = len(closest)
+                }</span>
+                <span class="cov8" title="1">batch := closest[i:end]
+
+                type res struct {
+                        val  []byte
+                        from kademlia.Contact
+                        ok   bool
+                        err  error
+                }
+                resCh := make(chan res, len(batch))
+                var wg sync.WaitGroup
+
+                for _, c := range batch </span><span class="cov8" title="1">{
+                        wg.Go(func() </span><span class="cov8" title="1">{
+                                val, found, err := n.SendGetSync(c, keyHex, perNodeTimeout)
+                                if err != nil </span><span class="cov8" title="1">{
+                                        resCh &lt;- res{nil, c, false, err}
+                                        return
+                                }</span>
+                                <span class="cov8" title="1">if found </span><span class="cov8" title="1">{
+                                        resCh &lt;- res{val, c, true, nil}
+                                        return
+                                }</span>
+                                <span class="cov0" title="0">resCh &lt;- res{nil, c, false, nil}</span>
+                        })
+                }
+
+                <span class="cov8" title="1">go func() </span><span class="cov8" title="1">{ wg.Wait(); close(resCh) }</span>()
+
+                <span class="cov8" title="1">for r := range resCh </span><span class="cov8" title="1">{
+                        if r.ok &amp;&amp; r.err == nil </span><span class="cov8" title="1">{
+                                return r.val, &amp;r.from, nil
+                        }</span>
+                }
+        }
+
+        <span class="cov0" title="0">return nil, nil, fmt.Errorf("value %s not found", keyHex)</span>
+}
+
+// contains checks if a Contact with same ID exists in slice
+func contains(list []kademlia.Contact, c kademlia.Contact) bool <span class="cov8" title="1">{
+        for _, x := range list </span><span class="cov8" title="1">{
+                if x.ID.Equals(c.ID) </span><span class="cov8" title="1">{
+                        return true
+                }</span>
+        }
+        <span class="cov8" title="1">return false</span>
+}
+
+func (n *Node) Shutdown(ctx context.Context) error <span class="cov8" title="1">{
+        done := make(chan struct{})
+        go func() </span><span class="cov8" title="1">{
+                _ = n.Server.Close() // Close waits for the listener goroutine to finish
+                close(done)
+        }</span>()
+
+        <span class="cov8" title="1">select </span>{
+        case &lt;-done:<span class="cov8" title="1">
+                return nil</span>
+        case &lt;-ctx.Done():<span class="cov0" title="0">
+                return ctx.Err()</span>
+        }
+}
+</pre>
+		
+		<pre class="file" id="file7" style="display: none">package util
+
+import (
+        "crypto/rand"
+        "crypto/sha256"
+        "encoding/hex"
+        "fmt"
+)
+
+const IDBytes = 20 // 160-bit
+
+type ID [IDBytes]byte
+
+// NewRandomID returns a cryptographically random 160-bit ID.
+func NewRandomID() ID <span class="cov8" title="1">{
+        var id ID
+        if _, err := rand.Read(id[:]); err != nil </span><span class="cov0" title="0">{
+                panic(fmt.Errorf("rand.Read: %w", err))</span>
+        }
+        <span class="cov8" title="1">return id</span>
+}
+
+// NewIDFromSeed deterministically derives a 160-bit ID from a seed string.
+func NewIDFromSeed(seed string) ID <span class="cov8" title="1">{
+        sum := sha256.Sum256([]byte(seed)) // 32 bytes
+        var id ID
+        copy(id[:], sum[:IDBytes]) // take first 20 bytes
+        return id
+}</span>
+
+// ParseHexID parses a 40-char hex string into an ID.
+func ParseHexID(h string) (ID, error) <span class="cov8" title="1">{
+        var id ID
+        b, err := hex.DecodeString(h)
+        if err != nil </span><span class="cov0" title="0">{
+                return id, fmt.Errorf("decode hex: %w", err)
+        }</span>
+        <span class="cov8" title="1">if len(b) != IDBytes </span><span class="cov0" title="0">{
+                return id, fmt.Errorf("wrong length: got %d, want %d", len(b), IDBytes)
+        }</span>
+        <span class="cov8" title="1">copy(id[:], b)
+        return id, nil</span>
+}
+
+// Hex returns the lowercase hex encoding of the ID.
+func (id ID) Hex() string <span class="cov8" title="1">{ return hex.EncodeToString(id[:]) }</span>
+
+// String implements fmt.Stringer (prints hex).
+func (id ID) String() string <span class="cov8" title="1">{ return id.Hex() }</span>
+
+// Less returns true if id &lt; otherKademliaID (bitwise)
+func (id ID) Less(otherKademliaID *ID) bool <span class="cov8" title="1">{
+        for i := 0; i &lt; IDBytes; i++ </span><span class="cov8" title="1">{
+                if id[i] != otherKademliaID[i] </span><span class="cov8" title="1">{
+                        return id[i] &lt; otherKademliaID[i]
+                }</span>
+        }
+        <span class="cov0" title="0">return false</span>
+}
+
+// Equals returns true if id == otherKademliaID (bitwise)
+func (id ID) Equals(otherKademliaID *ID) bool <span class="cov8" title="1">{
+        for i := 0; i &lt; IDBytes; i++ </span><span class="cov8" title="1">{
+                if id[i] != otherKademliaID[i] </span><span class="cov8" title="1">{
+                        return false
+                }</span>
+        }
+        <span class="cov8" title="1">return true</span>
+}
+
+// CalcDistance returns a new instance of a ID that is built
+// through a bitwise XOR operation betweeen id and target
+func (id ID) CalcDistance(target *ID) *ID <span class="cov8" title="1">{
+        result := ID{}
+        for i := 0; i &lt; IDBytes; i++ </span><span class="cov8" title="1">{
+                result[i] = id[i] ^ target[i]
+        }</span>
+        <span class="cov8" title="1">return &amp;result</span>
+}
+</pre>
+		
+		<pre class="file" id="file8" style="display: none">package util
+
+import (
+        "hash/fnv"
+        "math/rand"
+        "sync"
+)
+
+var (
+        chanceMu  sync.Mutex
+        chanceRng = map[string]*rand.Rand{}
+)
+
+// Chance returns true with the given percentage probability (0–100).
+// For example: Chance(25) ~25% chance of true.
+func Chance(percentage int, seed string) bool <span class="cov8" title="1">{
+        if percentage &lt;= 0 </span><span class="cov0" title="0">{
+                return false
+        }</span>
+        <span class="cov8" title="1">if percentage &gt;= 100 </span><span class="cov0" title="0">{
+                return true
+        }</span>
+
+        <span class="cov8" title="1">chanceMu.Lock()
+        r := chanceRng[seed]
+        if r == nil </span><span class="cov8" title="1">{
+                h := fnv.New64a()
+                _, _ = h.Write([]byte(seed))
+                r = rand.New(rand.NewSource(int64(h.Sum64())))
+                chanceRng[seed] = r
+        }</span>
+        // Use the RNG and advance its state
+        <span class="cov8" title="1">n := r.Intn(100)
+        chanceMu.Unlock()
+
+        return n &lt; percentage</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

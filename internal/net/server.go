@@ -91,11 +91,6 @@ type UDPServer struct {
 // expose bound address (handy for :0)
 func (s *UDPServer) Addr() *net.UDPAddr { return s.addr }
 
-// simple fire-and-forget wrapper
-func (s *UDPServer) Send(to *net.UDPAddr, msg Message) error {
-	return s.WriteTo(to, msg.String())
-}
-
 // Close shuts down the UDP server connection.
 func (s *UDPServer) Close() error {
 	s.mu.Lock()
